@@ -77,7 +77,13 @@ pnpm dev:board      # http://localhost:3000, reads the API through its own serve
 
 For the room moment: `pnpm demo:seed` (chair with a confirmed buyer at $185, one backup, one blocked scam), put the inbox address on screen.
 
-## 7. Submission (15:55 to 16:30)
+## 7. Optional: Lowball as a tool for other agents (Executor)
+
+1. Set `MCP_SERVER=true` (in `.env`, and `fly secrets set MCP_SERVER=true`).
+2. In Executor, register an MCP server: URL `https://<app>.fly.dev/api/mcp/lowball/mcp`, header `Authorization: Bearer <LOWBALL_API_TOKEN>`. Tools: `sell_item`, `get_status`, `set_floor`.
+3. Check it from the repo: `LOWBALL_API_URL=https://<app>.fly.dev pnpm --filter @lowball/api exec tsx src/demo/mcp-probe.ts`
+
+## 8. Submission (15:55 to 16:30)
 
 1. Make the repo public: `gh repo edit henrihjm/lowball --visibility public --accept-visibility-change-consequences`
 2. Enable CodeRabbit on it: https://app.coderabbit.ai (add repository `henrihjm/lowball`). Open one PR so it leaves a review.

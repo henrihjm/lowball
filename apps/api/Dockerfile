@@ -12,5 +12,6 @@ COPY packages/shared packages/shared
 COPY apps/api apps/api
 ENV PORT=8080
 EXPOSE 8080
+WORKDIR /app/apps/api
 USER node
-CMD ["pnpm", "--filter", "@lowball/api", "start"]
+CMD ["./node_modules/.bin/tsx", "src/index.ts"]
