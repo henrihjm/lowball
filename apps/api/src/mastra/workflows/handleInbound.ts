@@ -508,7 +508,8 @@ export async function respond(buyerId: string, inboundId: string, opts: { bypass
   const finalCheck = validateReply(written.text, { floorCents: floor, minAllowedCents: brief.rules.minAllowedCents });
   if (!finalCheck.ok) throw new Error(`refusing to send a reply that fails validation: ${finalCheck.reasons.join('; ')}`);
 
-  const reasoning = written.source === 'model' && written.reasoning ? written.reasoning : reason;
+  // The board shows why the number is what it is. That is code's reasoning; the model only chose the words.
+  const reasoning = reason;
   const suffix = written.rejected.length > 0 ? ` (${written.rejected.length} draft${written.rejected.length === 1 ? '' : 's'} rejected by validation${written.source === 'template' ? ', sent the template' : ''})` : '';
   return send(written.text, kind, reasoning + suffix, decision.priceCents);
 }
