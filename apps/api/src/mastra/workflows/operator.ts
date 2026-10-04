@@ -23,6 +23,7 @@ async function direct(text: string): Promise<string | undefined> {
   if (/^delete$/i.test(t)) return act.deleteItem();
   if ((m = t.match(/^(?:show\s+)?buyer\s+#?(\d+)$/i))) return act.showBuyer(parseInt(m[1]!, 10));
   if (/^take\s+(the\s+)?best(\s+offer)?$/i.test(t)) return act.takeBestOffer();
+  if (/^(post|list)(\s+(it|this))?(\s+(on|to)\s+craigslist)?$/i.test(t) || /^craigslist$/i.test(t)) return act.craigslist();
   if ((m = t.match(/^(?:pickup\s+|meeting\s+)?spot\s*[:=]?\s+(.{3,200})$/i))) return act.setSpot(m[1]!);
   if ((m = t.match(/^(?:pickup\s+)?windows?\s*[:=]?\s+(.{3,200})$/i))) return act.setWindows(m[1]!);
   return undefined;

@@ -148,5 +148,16 @@ export async function setWindows(text: string): Promise<string> {
   return `Pickup windows saved: ${text.trim()}.`;
 }
 
+/** Fill in the Craigslist form for the current item in a Kernel browser. Experimental. */
+export async function craigslist(): Promise<string> {
+  const item = await currentItem();
+  if (!item) return NO_ITEM;
+  if (!env.KERNEL_API_KEY) return 'KERNEL_API_KEY is not set. Post by hand with the inbox address as the contact email.';
+  const { kernelPostCore } = await import('../tools/kernelPost.js');
+  const res = await kernelPostCore(item.id).catch((err) => ({ ok: false as const, reason: (err as Error).message, liveViewUrl: undefined }));
+  if (res.ok) return `The Craigslist form is filled in. Add the photos and submit in the live view: ${res.liveViewUrl}`;
+  return `Craigslist posting did not go through (${res.reason}).${res.liveViewUrl ? ` Live view: ${res.liveViewUrl}` : ''} Post by hand with contact email ${item.inbox_address}.`;
+}
+
 export const HELP =
   'Try: status · digest · floor 150 · ask 200 · show buyer 2 · take best offer · sold 180 · pause · relist · delete · spot <where> · windows <days and times>. In demo mode: fast forward · pause clock.';

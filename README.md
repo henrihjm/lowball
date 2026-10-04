@@ -38,7 +38,7 @@ Every outbound reply writes a row with its one-line reasoning and the floor and 
 
 | Piece | What it does here |
 |---|---|
-| **AgentMail** | The agent's inbox. One inbox per item, one thread per buyer. Inbound mail arrives on a signed webhook; replies go out through the reply endpoint, in-thread. |
+| **AgentMail** | The agent's inbox. One inbox per item, one thread per buyer. Inbound mail arrives on a signed webhook, with a 3 second poll of the live inboxes as a backup (conference Wi-Fi drops tunnels); replies go out through the reply endpoint, in-thread. |
 | **Mastra** | Agents (identifier, pricer, negotiator, operator, classifier), tools (`acceptOffer`, `scheduleSlot`, `blockBuyer`, `proposeReply`, `exaComps`), tracing, and an `MCPServer` that exposes Lowball to other agents. |
 | **Neon Postgres** | Items, buyers, messages with reasoning, slots, decisions, clocks. Mastra traces live in the same database (schema `mastra`). |
 | **Neon AI Gateway** | Every model call (OpenAI-compatible endpoint). |
@@ -92,7 +92,7 @@ With `MCP_SERVER=true` the API serves a Streamable HTTP MCP endpoint at `/api/mc
 
 ## What is experimental or manual today
 
-- **Craigslist posting through Kernel** is behind `KERNEL_POSTING` and off. The fallback is in use: the bot hands you the listing text and the inbox address, you post by hand, and Craigslist's confirmation mail is forwarded to Telegram. The inbox is the product; posting is one form.
+- **Craigslist posting through Kernel** is experimental and behind `KERNEL_POSTING` (off). What works: a Kernel cloud browser walks Craigslist's posting flow (area, neighborhood, type, category) and fills in the form with the title, price, listing text and the item's inbox as contact email. The live view URL is stored on the item, so the board embeds it. Photos, ZIP code and the final submit are done by hand in that live view. The operator command "post on craigslist" runs it for the current item. With the flag off, the bot hands you the listing text and the inbox address and you post by hand. Either way Craigslist's confirmation mail arrives in the item inbox and is forwarded to Telegram.
 - **Delisting** after a sale is by hand. The sold summary on Telegram includes the link to take down.
 - **Vision.** The single photo-identification call goes through the Neon AI Gateway. If the gateway cannot take images, set `VISION_FALLBACK_PROVIDER_KEY` and that one call goes to the provider directly. Every text call stays on the gateway.
 - Single user (Henri). No accounts, no payments automation, no calendar OAuth: typed pickup windows are enough.

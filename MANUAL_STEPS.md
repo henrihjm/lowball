@@ -36,7 +36,7 @@ pnpm dev            # starts the API on :8787
 1. Create an account at https://accounts.craigslist.org/login/signup with a throwaway email you control. Complete phone verification. Log in once in a normal browser.
 2. Post by hand at https://post.craigslist.org/c/sfo : "for sale by owner", category furniture. Paste the listing text the bot sent you. **Contact email: the inbox address the bot gave you** (CL mail relay on). Add the photos.
 3. Craigslist emails a confirmation link to that inbox. The bot forwards the link to you on Telegram: tap it to publish.
-4. Automated posting through Kernel is experimental and off (`KERNEL_POSTING=false`). The inbox is the demo; posting is a slide.
+4. Or let Kernel fill the form: type `post on craigslist` in the board chat or on Telegram. It returns a live view link with the form filled in (title, price, text, contact email). Add the ZIP code and photos there and submit. Experimental; posting by hand always works.
 
 ## 4. Deploy on Fly (by 15:30)
 
