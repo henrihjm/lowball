@@ -6,7 +6,7 @@ import { dollars, parseFloorFromCaption, proposePrice, roundTo5 } from '../../po
 import * as tpl from '../../telegram/templates.js';
 import type { Button } from '../../telegram/notify.js';
 import { identify, type Photo } from '../agents/identifier.js';
-import { findComps } from '../agents/pricer.js';
+import { estimateUsedPrice, findComps } from '../agents/pricer.js';
 
 export interface Card {
   itemId: string;
@@ -83,7 +83,17 @@ export async function draftItem(d: DraftInput): Promise<Card> {
   } catch (err) {
     console.warn('[list] comps search failed:', (err as Error).message);
   }
-  const price = proposePrice(comps.map((c) => c.price_cents), d.floorOverrideCents);
+  let price = proposePrice(comps.map((c) => c.price_cents), d.floorOverrideCents);
+  if (!price.ok) {
+    // Research came up thin. Henri is not asked: the pricer estimates, and the estimate is recorded as one.
+    const est = await estimateUsedPrice(d.title, d.condition, comps);
+    if (est) {
+      const ask = roundTo5(est.cents * 1.1);
+      const floor = Math.min(ask, d.floorOverrideCents ?? roundTo5(est.cents * 0.75));
+      comps = [...comps, { title: `Estimate: ${est.basis}`, price_cents: est.cents, url: '', source: 'estimate' }];
+      price = { ok: true, askCents: ask, floorCents: floor, medianCents: est.cents, loCents: Math.min(...comps.map((c) => c.price_cents)), hiCents: Math.max(...comps.map((c) => c.price_cents)), n: comps.length };
+    }
+  }
   // Keep only the comps that survived the outlier filter, so the card's range matches the math.
   const kept = price.ok ? comps.filter((c) => c.price_cents >= price.loCents && c.price_cents <= price.hiCents) : comps;
 

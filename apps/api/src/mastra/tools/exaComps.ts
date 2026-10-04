@@ -15,14 +15,15 @@ export interface RawComp {
 
 let exa: Exa | undefined;
 
-export async function searchComps(itemName: string): Promise<RawComp[]> {
+export async function searchComps(itemName: string, wide = false): Promise<RawComp[]> {
   if (!env.EXA_API_KEY) return [];
   exa ??= new Exa(env.EXA_API_KEY);
   const res = await exa.search(`${itemName} used sold price`, {
     numResults: 15,
     type: 'fast',
     contents: { highlights: true },
-    includeDomains: COMP_DOMAINS,
+    // The wide pass drops the marketplace filter: resale blogs, price guides and smaller marketplaces count too.
+    ...(wide ? {} : { includeDomains: COMP_DOMAINS }),
   });
   return res.results.map((r) => ({
     title: r.title ?? '',

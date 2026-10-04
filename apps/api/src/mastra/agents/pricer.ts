@@ -48,10 +48,35 @@ export function ruleComps(raw: RawComp[]): Comp[] {
   return out;
 }
 
-export async function findComps(itemName: string): Promise<Comp[]> {
-  const raw = await searchComps(itemName);
+async function extract(itemName: string, raw: RawComp[]): Promise<Comp[]> {
   if (raw.length === 0) return [];
   const listing = raw.map((r, i) => `[${i}] ${r.title} (${r.source})\n${r.highlights.join(' | ').slice(0, 700)}`).join('\n\n');
   const out = await generateJson(pricer, `ITEM: ${itemName}\n\nRESULTS:\n${listing}`, schema, 'pricer', 20_000);
   return out ? keepVerified(raw, out.comps) : ruleComps(raw);
+}
+
+/** Marketplaces first. If that is thin, a second, wider search before giving up on real comps. */
+export async function findComps(itemName: string): Promise<Comp[]> {
+  const comps = await extract(itemName, await searchComps(itemName));
+  if (comps.length >= 3) return comps;
+  const wide = await extract(itemName, await searchComps(itemName, true).catch(() => []));
+  const seen = new Set(comps.map((c) => c.url));
+  return [...comps, ...wide.filter((c) => !seen.has(c.url))];
+}
+
+const estimateSchema = z.object({ typical_used_dollars: z.number().positive(), basis: z.string() });
+
+/**
+ * Last resort when research finds fewer than 3 real comps: the model's estimate of the typical
+ * used price, so Henri is never asked. The basis is stored with the item and shown as an estimate.
+ */
+export async function estimateUsedPrice(itemName: string, condition: string | null | undefined, found: Comp[]): Promise<{ cents: number; basis: string } | undefined> {
+  const out = await generateJson(
+    pricer,
+    `No search results to parse this time. Estimate instead.\nITEM: ${itemName}\nCONDITION: ${condition ?? 'used, as pictured'}\nPRICES FOUND SO FAR: ${found.map((c) => `$${c.price_cents / 100}`).join(', ') || 'none'}\n\nEstimate what this typically sells for used, locally, between private people. Be conservative.\nReply with only JSON: {"typical_used_dollars": number, "basis": "one short sentence on what the estimate rests on"}`,
+    estimateSchema,
+    'estimate',
+    20_000,
+  );
+  return out ? { cents: Math.round(out.typical_used_dollars * 100), basis: out.basis.slice(0, 200) } : undefined;
 }

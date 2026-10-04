@@ -106,10 +106,9 @@ async function processPhotos(ctx: Context, fileIds: string[], caption?: string):
       awaiting = { kind: 'price', itemId: card.itemId };
       return;
     }
-    const prices = (item.comps ?? []).map((c) => c.price_cents);
-    await ctx.reply(
-      `${item.title}. ${item.condition_notes ? item.condition_notes[0]!.toUpperCase() + item.condition_notes.slice(1) : 'Condition as pictured'}. Similar ones go for ${dollars(Math.min(...prices))} to ${dollars(Math.max(...prices))} (${prices.length} comparable listings).`,
-    );
+    const real = (item.comps ?? []).filter((c) => c.source !== 'estimate').map((c) => c.price_cents);
+    const basis = real.length >= 3 ? `Similar ones go for ${dollars(Math.min(...real))} to ${dollars(Math.max(...real))} (${real.length} comparable listings).` : 'Few comparable listings out there, so I priced it from an estimate of what these sell for used.';
+    await ctx.reply(`${item.title}. ${item.condition_notes ? item.condition_notes[0]!.toUpperCase() + item.condition_notes.slice(1) : 'Condition as pictured'}. ${basis}`);
     await postAndAnnounce(ctx, card.itemId);
   } catch (err) {
     console.error('[telegram] photo failed:', err);
