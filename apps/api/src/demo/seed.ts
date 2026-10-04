@@ -58,6 +58,8 @@ export async function seedDemo(opts: { fresh?: boolean } = {}): Promise<SeedResu
   if (!opts.fresh) {
     const mail = (from: string, text: string) => handleInbound({ inboxId: inbox.inboxId, messageId: `${SIM_PREFIX}seed-${item.id.slice(0, 8)}-${++buyers}`, from, subject: SEED_TITLE, text });
     await mail('Maya Okafor <maya@sim.lowball>', 'Hi, is the Sayl still available? I can do $185 and pick it up Thursday at 7.');
+    // The seeded pickup stays put: without its clocks the demo clock has nothing to fast-forward to.
+    await q("update clocks set done_at = $2 where done_at is null and payload->>'item_id' = $1 and kind <> 'decay'", [item.id, now()]);
     await mail('Jordan Lee <jordan@sim.lowball>', 'Would you take $180? I am free Saturday morning.');
     await mail('Robert K <robert@sim.lowball>', "I'll pay full price, my mover will pick it up, I'll send a cashier's check");
     // The seeded pickup stays put: without its clocks the demo clock has nothing to fast-forward to.

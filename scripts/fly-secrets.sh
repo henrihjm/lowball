@@ -13,7 +13,7 @@ while IFS= read -r line; do
   val="$(printf '%s' "$val" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
   [[ -z "$val" || "$val" == \#* ]] && continue
   case "$key" in
-    PORT|PUBLIC_BASE_URL|LOWBALL_API_URL) continue ;;   # set per environment
+    PORT|PUBLIC_BASE_URL|LOWBALL_API_URL|FLY_API_TOKEN|TZ) continue ;;   # set per environment
   esac
   args+=("$key=$val")
   echo "  $key"

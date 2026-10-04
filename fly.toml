@@ -21,8 +21,8 @@ primary_region = "sjc"
     path = "/health"
     interval = "15s"
     timeout = "5s"
-    grace_period = "30s"
+    grace_period = "120s"
 
 [[vm]]
-  memory = "1gb"
-  cpus = 1
+  memory = "2gb"
+  cpus = 2
