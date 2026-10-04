@@ -3,6 +3,8 @@
 
 <p align="center"><img src="docs/listings.jpg" alt="Lowball listings: every item as a photo card with its price and status" width="860"></p>
 
+**[Watch the one-minute walkthrough](docs/demo.mp4)** (real app screens and real agent replies, composed and narrated).
+
 ## What it does
 
 Selling your own stuff is thirty messages with strangers. Half are lowballs, some are scams, so most people never bother. Lowball is a personal agent that does all of it.
