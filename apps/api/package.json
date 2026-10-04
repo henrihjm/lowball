@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "db:push": "tsx src/db/push.ts",
     "demo:seed": "tsx src/demo/seed.ts",
-    "demo:flood": "tsx src/demo/flood.ts"
+    "demo:flood": "tsx src/demo/flood.ts",
+    "studio": "mastra dev --dir src/mastra"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
@@ -26,12 +27,12 @@
     "hono": "^4.13.13",
     "pg": "^8.23.1",
     "svix": "^2.6.1",
+    "tsx": "^4.23.15",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",
     "@types/pg": "^8.23.1",
-    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   }

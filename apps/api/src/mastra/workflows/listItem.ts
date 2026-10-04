@@ -62,9 +62,41 @@ export async function cardFor(itemId: string): Promise<Card> {
 async function redraft(itemId: string): Promise<void> {
   const item = (await getItem(itemId))!;
   const user = await getUser(item.user_id);
-  const meta = (item.photos as any)?.meta as { title: string; notes?: string } | undefined;
-  const copy = listingCopy({ title: item.title ?? 'Item', notes: meta?.notes, condition: item.condition_notes, neighborhood: user.neighborhood, windows: user.pickup_windows, askCents: item.ask_cents });
+  const copy = listingCopy({ title: item.title ?? 'Item', condition: item.condition_notes, neighborhood: user.neighborhood, windows: user.pickup_windows, askCents: item.ask_cents });
   await q('update items set description = $2 where id = $1', [itemId, copy]);
+}
+
+export interface DraftInput {
+  title: string;
+  condition?: string | null;
+  notes?: string | null;
+  searchQuery?: string | null;
+  floorOverrideCents?: number;
+  telegramFileIds?: string[];
+}
+
+/** Price from comps and store a draft. Nothing is live until Henri taps Post. */
+export async function draftItem(d: DraftInput): Promise<Card> {
+  let comps: Comp[] = [];
+  try {
+    comps = await findComps(d.searchQuery || d.title);
+  } catch (err) {
+    console.warn('[list] comps search failed:', (err as Error).message);
+  }
+  const price = proposePrice(comps.map((c) => c.price_cents), d.floorOverrideCents);
+  // Keep only the comps that survived the outlier filter, so the card's range matches the math.
+  const kept = price.ok ? comps.filter((c) => c.price_cents >= price.loCents && c.price_cents <= price.hiCents) : comps;
+
+  const user = await getUser();
+  const photos = (d.telegramFileIds ?? []).map((f) => ({ telegram_file_id: f }));
+  const row = (await q1<{ id: string }>(
+    `insert into items (user_id, status, title, condition_notes, photos, ask_cents, floor_cents, comps, created_at)
+     values ('henri', 'draft', $1, $2, $3::jsonb, $4, $5, $6::jsonb, $7) returning id`,
+    [d.title, d.condition ?? null, json(photos), price.ok ? price.askCents : null, price.ok ? price.floorCents : null, json(kept), now()],
+  ))!;
+  const copy = listingCopy({ title: d.title, notes: d.notes, condition: d.condition, neighborhood: user.neighborhood, windows: user.pickup_windows, askCents: price.ok ? price.askCents : null });
+  await q('update items set description = $2 where id = $1', [row.id, copy]);
+  return cardFor(row.id);
 }
 
 /** Photo in, proposal card out. Creates a draft item. */
@@ -74,28 +106,14 @@ export async function listItem(input: { photos: Photo[]; telegramFileIds: string
   if (!title) {
     return { error: "I couldn't tell what this is from the photo. Send it again with a caption, e.g. \"Herman Miller Sayl chair, 2019, one arm loose\"." };
   }
-
-  let comps: Comp[] = [];
-  try {
-    comps = await findComps(id?.search_query || title);
-  } catch (err) {
-    console.warn('[list] comps search failed:', (err as Error).message);
-  }
-  const floorOverride = parseFloorFromCaption(input.caption);
-  const price = proposePrice(comps.map((c) => c.price_cents), floorOverride);
-  // Keep only the comps that survived the outlier filter, so the card's range matches the math.
-  const kept = price.ok ? comps.filter((c) => c.price_cents >= price.loCents && c.price_cents <= price.hiCents) : comps;
-
-  const user = await getUser();
-  const photos = input.telegramFileIds.map((f) => ({ telegram_file_id: f }));
-  const row = (await q1<{ id: string }>(
-    `insert into items (user_id, status, title, condition_notes, photos, ask_cents, floor_cents, comps, created_at)
-     values ('henri', 'draft', $1, $2, $3::jsonb, $4, $5, $6::jsonb, $7) returning id`,
-    [title, id?.condition ?? null, json(photos), price.ok ? price.askCents : null, price.ok ? price.floorCents : null, json(kept), now()],
-  ))!;
-  const copy = listingCopy({ title, notes: id?.notes, condition: id?.condition, neighborhood: user.neighborhood, windows: user.pickup_windows, askCents: price.ok ? price.askCents : null });
-  await q('update items set description = $2 where id = $1', [row.id, copy]);
-  return cardFor(row.id);
+  return draftItem({
+    title,
+    condition: id?.condition,
+    notes: id?.notes,
+    searchQuery: id?.search_query,
+    floorOverrideCents: parseFloorFromCaption(input.caption),
+    telegramFileIds: input.telegramFileIds,
+  });
 }
 
 /** "220 floor 160", "ask 200", "floor 150". Returns an error line when the numbers do not make sense. */

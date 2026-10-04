@@ -4,6 +4,8 @@ const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   devIndicators: false,
+  // `next dev` otherwise writes AGENTS.md and CLAUDE.md into this directory.
+  agentRules: false,
   async headers() {
     return [
       {

@@ -1,6 +1,7 @@
 // One Node process: HTTP routes, AgentMail webhook, scheduler loop, Telegram bot.
 import { timingSafeEqual } from 'node:crypto';
-import { serve } from '@hono/node-server';
+import { serve, type HttpBindings } from '@hono/node-server';
+import { RESPONSE_ALREADY_SENT } from '@hono/node-server/utils/response';
 import { Hono, type Context, type Next } from 'hono';
 import { dbKind } from './db/client.js';
 import { currentItem } from './db/repo.js';
@@ -8,13 +9,15 @@ import { clockInfo } from './demo/clock.js';
 import { ensureWebhook, hasWebhookSecret, mailEnabled, SIM_PREFIX, verifyWebhook } from './email/agentmail.js';
 import { env } from './env.js';
 import './mastra/index.js';
+import { MCP_PATH, mcpServer } from './mastra/mcp.js';
 import { enqueueInbound, handleInbound, queueDepth, type InboundEmail } from './mastra/workflows/handleInbound.js';
 import { startScheduler } from './mastra/workflows/scheduler.js';
 import { runOperator } from './mastra/workflows/operator.js';
+import { operatorRequest } from '@lowball/shared';
 import { boardState } from './state.js';
 import { itemPhoto, startTelegram, telegramStatus } from './telegram/bot.js';
 
-const app = new Hono();
+const app = new Hono<{ Bindings: HttpBindings }>();
 
 function tokenOk(given: string | undefined): boolean {
   const want = env.API_TOKEN;
@@ -81,15 +84,22 @@ app.get('/api/state', async (c) => c.json(await boardState(c.req.query('item') ?
 
 // Operator chat from the board. Same commands as Telegram.
 app.post('/api/operator', async (c) => {
-  const b = await c.req.json<{ text?: string }>().catch(() => ({}) as { text?: string });
-  if (!b.text || typeof b.text !== 'string') return c.json({ error: 'text is required' }, 400);
-  return c.json({ reply: await runOperator(b.text) });
+  const b = operatorRequest.safeParse(await c.req.json().catch(() => null));
+  if (!b.success) return c.json({ error: 'text is required' }, 400);
+  return c.json({ reply: await runOperator(b.data.text) });
 });
 
 app.get('/api/photo/:id', async (c) => {
   const photo = await itemPhoto(c.req.param('id'));
   if (!photo) return c.json({ error: 'no photo' }, 404);
   return c.body(new Uint8Array(photo.bytes), 200, { 'content-type': photo.mime, 'cache-control': 'private, max-age=300' });
+});
+
+// Lowball as an MCP server (P2, behind MCP_SERVER). Register this URL in Executor with the bearer token.
+app.all(MCP_PATH, async (c) => {
+  if (!env.MCP_SERVER) return c.json({ error: 'MCP server is off (MCP_SERVER=false)' }, 404);
+  await mcpServer.startHTTP({ url: new URL(c.req.url), httpPath: MCP_PATH, req: c.env.incoming, res: c.env.outgoing });
+  return RESPONSE_ALREADY_SENT;
 });
 
 // Simulated buyer email (seed and flood test). Goes through the same pipeline; no real mail is sent.
@@ -131,6 +141,9 @@ async function main() {
   await startScheduler();
   await startTelegram().catch((err) => console.error('[boot] Telegram did not start:', (err as Error).message));
 }
+
+// A failed background call (a model, a mail send) must never take the whole agent down mid-demo.
+process.on('unhandledRejection', (err) => console.error('[process] unhandled rejection:', err));
 
 main().catch((err) => {
   console.error('[boot] fatal:', err);
