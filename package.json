@@ -1,0 +1,17 @@
+{
+  "name": "lowball",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@10.29.3",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "pnpm --filter @lowball/api dev",
+    "start": "pnpm --filter @lowball/api start",
+    "dev:board": "pnpm --filter @lowball/board dev",
+    "test": "pnpm --filter @lowball/api test",
+    "typecheck": "pnpm -r typecheck",
+    "db:push": "pnpm --filter @lowball/api db:push",
+    "demo:seed": "pnpm --filter @lowball/api demo:seed",
+    "demo:flood": "pnpm --filter @lowball/api demo:flood"
+  }
+}
