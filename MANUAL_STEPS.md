@@ -58,7 +58,10 @@ Stop `pnpm dev` on your laptop once Fly is up: only one process may poll the Tel
 pnpm dev:board      # http://localhost:3000, reads the API through its own server routes
 ```
 
-Local is fine for the demo. To point it at Fly, set `LOWBALL_API_URL=https://<app>.fly.dev` in `.env`.
+- Room view for the "lowball the chair" moment: http://localhost:3000/?room=1 (or press R). Inbox address in huge type, one reply per row, floor in the accent color.
+- Keep the board local. Its server attaches the API token to the operator chat, so anyone who can open the board can steer the agent. If it is ever hosted publicly, set `BOARD_READONLY=1`.
+- To point it at Fly, set `LOWBALL_API_URL=https://<app>.fly.dev` in `.env`.
+- `?mock=1` shows labelled sample data without the API.
 
 ## 6. Rehearsal (15:40, three phones)
 

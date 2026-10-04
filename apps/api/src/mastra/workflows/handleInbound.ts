@@ -1,5 +1,7 @@
 // handleInbound: classify -> negotiate -> validate -> send -> log.
 // One inbound buyer email in, at most one reply out, in the same thread.
+import { createStep, createWorkflow } from '@mastra/core/workflows';
+import { z } from 'zod';
 import { q, q1 } from '../../db/client.js';
 import {
   activeSlot,
@@ -99,17 +101,20 @@ export function enqueueInbound(ev: InboundEmail): void {
 
 // ---------- pipeline ----------
 
-export async function handleInbound(ev: InboundEmail): Promise<InboundResult> {
+type Intake = { proceed: true; buyerId: string; inboundId: string } | { proceed: false; result: InboundResult };
+
+/** Who wrote, about which item, and have we seen this message before. */
+async function intake(ev: InboundEmail): Promise<Intake> {
   const { name, email } = parseAddress(ev.from);
   const item = await itemForInbox(ev.inboxId);
   if (!item) {
     console.warn(`[inbound] no live item for inbox ${ev.inboxId}; ignoring mail from ${email}`);
-    return { status: 'silent', reason: 'no_item' };
+    return { proceed: false, result: { status: 'silent', reason: 'no_item' } };
   }
 
   const system = systemMailKind(email, ev.subject, item.inbox_address);
-  if (system === 'craigslist') return handleCraigslistMail(item, ev);
-  if (system) return { status: 'silent', reason: system };
+  if (system === 'craigslist') return { proceed: false, result: await handleCraigslistMail(item, ev) };
+  if (system) return { proceed: false, result: { status: 'silent', reason: system } };
 
   const body = cleanBody(ev.extractedText ?? ev.text, ev.html);
   const at = now();
@@ -130,9 +135,77 @@ export async function handleInbound(ev: InboundEmail): Promise<InboundResult> {
      values ($1, 'in', $2, $3, $4) on conflict (agentmail_message_id) do nothing returning id`,
     [buyer.id, ev.messageId, body, at],
   );
-  if (!row) return { status: 'silent', buyerId: buyer.id, reason: 'duplicate' };
+  if (!row) return { proceed: false, result: { status: 'silent', buyerId: buyer.id, reason: 'duplicate' } };
+  return { proceed: true, buyerId: buyer.id, inboundId: row.id };
+}
 
-  return withBuyerLock(buyer.id, () => respond(buyer.id, row.id));
+// ---------- the Mastra workflow: intake -> respond ----------
+
+const inboundSchema = z.object({
+  inboxId: z.string(),
+  threadId: z.string().nullish(),
+  messageId: z.string(),
+  from: z.string(),
+  subject: z.string().nullish(),
+  text: z.string().nullish(),
+  html: z.string().nullish(),
+  extractedText: z.string().nullish(),
+});
+const resultSchema = z.object({
+  status: z.enum(['replied', 'silent']),
+  buyerId: z.string().optional(),
+  kind: z.string().optional(),
+  text: z.string().optional(),
+  reason: z.string().optional(),
+});
+const intakeSchema = z.object({ proceed: z.boolean(), buyerId: z.string().optional(), inboundId: z.string().optional(), result: resultSchema.optional() });
+
+const intakeStep = createStep({
+  id: 'intake',
+  description: 'Map the sender to a buyer on the item, drop system mail, and dedupe on the AgentMail message id.',
+  inputSchema: inboundSchema,
+  outputSchema: intakeSchema,
+  execute: async ({ inputData }) => intake(inputData),
+});
+
+const respondStep = createStep({
+  id: 'respond',
+  description: 'Scam rules, classification, the numbers (code), the words (negotiator), validation, send in thread, log with reasoning.',
+  inputSchema: intakeSchema,
+  outputSchema: resultSchema,
+  execute: async ({ inputData }) => {
+    if (!inputData.proceed || !inputData.buyerId || !inputData.inboundId) return inputData.result ?? { status: 'silent' as const, reason: 'skipped' };
+    const { buyerId, inboundId } = inputData;
+    return withBuyerLock(buyerId, () => respond(buyerId, inboundId));
+  },
+});
+
+export const inboundWorkflow = createWorkflow({
+  id: 'handle-inbound',
+  description: 'One inbound buyer email in, at most one validated reply out, in the same thread.',
+  inputSchema: inboundSchema,
+  outputSchema: resultSchema,
+})
+  .then(intakeStep)
+  .then(respondStep)
+  .commit();
+
+/**
+ * Runs the handle-inbound workflow for one email. If the workflow engine itself fails,
+ * the same two steps run directly; the message id dedupe makes that safe to repeat.
+ */
+export async function handleInbound(ev: InboundEmail): Promise<InboundResult> {
+  try {
+    const run = await inboundWorkflow.createRun();
+    const out = await run.start({ inputData: ev });
+    if (out.status === 'success') return out.result as InboundResult;
+    console.warn(`[inbound] workflow ended with status ${out.status}; running the steps directly`);
+  } catch (err) {
+    console.warn('[inbound] workflow engine failed; running the steps directly:', (err as Error).message);
+  }
+  const first = await intake(ev);
+  if (!first.proceed) return first.result;
+  return withBuyerLock(first.buyerId, () => respond(first.buyerId, first.inboundId));
 }
 
 async function handleCraigslistMail(item: Item, ev: InboundEmail): Promise<InboundResult> {

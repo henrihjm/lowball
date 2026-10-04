@@ -29,6 +29,12 @@ export function useBoardState({ enabled, itemId, mock, intervalMs }: Options) {
     let stopped = false;
     let inFlight = false;
     let again = false;
+    let fails = 0;
+    // One missed poll (the API restarting, a slow query) is not worth a red banner on the projector.
+    const fail = (kind: Conn) => {
+      fails += 1;
+      if (fails >= 3 || kind === 'unauthorized') setConn(kind);
+    };
     let timer: ReturnType<typeof setTimeout> | undefined;
     const ctrl = new AbortController();
 
@@ -57,14 +63,15 @@ export function useBoardState({ enabled, itemId, mock, intervalMs }: Options) {
             lastKey.current = key;
             setState(data);
           }
+          fails = 0;
           setConn('live');
         } else {
           const err = (await res.json().catch(() => null)) as { error?: string } | null;
           if (stopped) return;
-          setConn(err?.error === 'unauthorized' ? 'unauthorized' : err?.error === 'api_unreachable' ? 'offline' : 'error');
+          fail(err?.error === 'unauthorized' ? 'unauthorized' : err?.error === 'api_unreachable' ? 'offline' : 'error');
         }
       } catch {
-        if (!stopped) setConn('offline');
+        if (!stopped) fail('offline');
       } finally {
         inFlight = false;
       }

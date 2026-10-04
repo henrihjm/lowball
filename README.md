@@ -72,6 +72,12 @@ pnpm demo:flood             # 30 simulated buyers in 60 seconds
 
 `/api/*` and `/demo/*` require the shared secret `LOWBALL_API_TOKEN` (header `x-lowball-token` or `Authorization: Bearer`). The board's server routes add it; the browser never sees it.
 
+## Operator board
+
+`pnpm dev:board` serves the board on :3000: an assistant-ui chat to the operator agent on the left ("drop floor to 150"), and on the right the item, the live buyer threads with the floor, the ask and the agent's reasoning beside every reply, and the buyers ranked by score. Blocked buyers show the matched scam rule in a red tag. `/?room=1` (or R) is the projector view: the inbox address in huge type and one reply per row.
+
+The browser only talks to the board's own routes; those proxy to the API and attach the token server-side. Buyer addresses are masked. Keep the board local or set `BOARD_READONLY=1`, since its chat can steer the agent.
+
 ## Demo mode
 
 `DEMO_MODE=true` changes three things:

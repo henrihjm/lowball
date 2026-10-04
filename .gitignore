@@ -9,3 +9,7 @@ dist
 .DS_Store
 tmp
 .vercel
+*.tsbuildinfo
+next-env.d.ts
+apps/board/AGENTS.md
+apps/board/CLAUDE.md
