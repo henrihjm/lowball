@@ -7,6 +7,7 @@ import { dbKind } from './db/client.js';
 import { currentItem } from './db/repo.js';
 import { clockInfo } from './demo/clock.js';
 import { ensureWebhook, hasWebhookSecret, mailEnabled, SIM_PREFIX, verifyWebhook } from './email/agentmail.js';
+import { startMailPoller } from './email/poller.js';
 import { env } from './env.js';
 import './mastra/index.js';
 import { MCP_PATH, mcpServer } from './mastra/mcp.js';
@@ -139,6 +140,7 @@ async function main() {
   }
 
   await startScheduler();
+  startMailPoller();
   await startTelegram().catch((err) => console.error('[boot] Telegram did not start:', (err as Error).message));
 }
 

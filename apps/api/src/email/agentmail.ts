@@ -103,15 +103,37 @@ export async function getInbox(inboxId: string): Promise<{ inboxId: string; emai
   return { inboxId: inbox.inboxId, email: inbox.email };
 }
 
+export interface ReceivedMail {
+  inboxId: string;
+  threadId: string;
+  messageId: string;
+  from: string;
+  subject?: string;
+  timestamp: Date;
+}
+
+/** Recent received mail in an inbox, newest first. Used by the poller that backs up the webhook. */
+export async function listReceived(inboxId: string, limit = 25): Promise<ReceivedMail[]> {
+  const res = await am().inboxes.messages.list(inboxId, { limit, labels: ['received'] });
+  return res.messages.map((m) => ({ inboxId: m.inboxId, threadId: m.threadId, messageId: m.messageId, from: m.from, subject: m.subject, timestamp: new Date(m.timestamp) }));
+}
+
+export async function getMessageBody(inboxId: string, messageId: string): Promise<{ text?: string; html?: string; extractedText?: string }> {
+  const m = await am().inboxes.messages.get(inboxId, messageId);
+  return { text: m.text, html: m.html, extractedText: m.extractedText };
+}
+
 let webhookSecret = '';
 
 /** Registers the message.received webhook for this deployment (idempotent) and keeps its signing secret. */
 export async function ensureWebhook(baseUrl: string): Promise<string> {
   const url = `${baseUrl}/webhooks/agentmail`;
   const existing = await am().webhooks.list();
-  let hook = existing.webhooks?.find((w) => w.url === url);
-  hook ??= await am().webhooks.create({ url, eventTypes: ['message.received'] });
-  webhookSecret = hook.secret;
+  const found = existing.webhooks?.find((w) => w.url === url);
+  // The list does not carry the signing secret; fetch the endpoint itself for it.
+  const hook = found ? await am().webhooks.get(found.webhookId) : await am().webhooks.create({ url, eventTypes: ['message.received'] });
+  webhookSecret = hook.secret ?? '';
+  if (!webhookSecret) throw new Error(`webhook ${hook.webhookId} returned no signing secret`);
   return hook.webhookId;
 }
 
