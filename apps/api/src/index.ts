@@ -115,7 +115,7 @@ app.post('/l/:key/sell', async (c) => {
   try {
     const body = await c.req.parseBody();
     const out = await sellFromPhoto(body.photo);
-    if (out.url) await notifyOwner(`Listed from the web app. ${env.PUBLIC_BASE_URL}${out.url}`);
+    if (out.url) await notifyOwner('Listed from the web app. It is on your listings page.');
     return c.json(out, out.url ? 200 : 422);
   } catch (err) {
     console.error('[sell] failed:', err);

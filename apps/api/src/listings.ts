@@ -8,7 +8,7 @@ import { dollars } from './policy/pricing.js';
 import { formatSlotLong } from './policy/windows.js';
 
 /** Derived from the API token, so the token itself never appears in a link. */
-export const listingsKey = () => createHash('sha256').update(`listings:${env.API_TOKEN}`).digest('hex').slice(0, 20);
+export const listingsKey = () => createHash('sha256').update(`listings-v2:${env.API_TOKEN}`).digest('hex').slice(0, 20);
 export const listingsUrl = () => (env.PUBLIC_BASE_URL && env.API_TOKEN ? `${env.PUBLIC_BASE_URL}/l/${listingsKey()}` : undefined);
 
 const h = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
