@@ -32,7 +32,7 @@ body{margin:0;background:var(--bg);color:var(--text);font:17px/1.47 -apple-syste
 a{color:inherit;text-decoration:none}
 nav{max-width:1080px;margin:0 auto;padding:22px 24px;display:flex;align-items:center;justify-content:space-between}
 .brand{font-weight:600;font-size:26px;letter-spacing:-.03em;display:inline-flex;align-items:baseline;padding-top:10px}
-.wb{flex:none;width:.62em;height:.56em;margin:0 .04em;overflow:visible;cursor:pointer;align-self:baseline}.wb path{fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round}.wb circle{fill:currentColor}.back{color:var(--muted);font-size:15px}
+.wb{flex:none;width:.7em;height:.64em;margin:0 .03em;overflow:visible;cursor:pointer;align-self:baseline}.wb path{fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round}.wb circle{fill:currentColor}.back{color:var(--muted);font-size:15px}
 main{max-width:1080px;margin:0 auto;padding:8px 24px 96px}
 .hero{padding:36px 0 40px}.hero h1{font-size:56px;line-height:1.05;font-weight:600;letter-spacing:-.035em;margin:0}.hero p{margin:10px 0 0;color:var(--muted);font-size:21px}
 .label{font-size:13px;font-weight:600;color:var(--muted);margin:40px 0 16px}
