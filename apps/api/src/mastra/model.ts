@@ -53,7 +53,7 @@ export async function generateJson<T>(agent: Agent<any, any>, messages: any, sch
   if (!env.llmConfigured) return undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const res = await withTimeout(agent.generate(messages, { maxSteps: 1 }), timeoutMs, label);
+      const res = await withTimeout(agent.generate(messages, { maxSteps: 1, toolChoice: 'none' }), timeoutMs, label);
       const parsed = schema.safeParse(parseJsonLoose(res.text ?? ''));
       if (parsed.success) return parsed.data;
       console.warn(`[llm] ${label}: output failed validation:`, parsed.error.issues.slice(0, 2));
