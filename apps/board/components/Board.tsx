@@ -7,6 +7,7 @@ import { ItemHeader, RoomHero } from './ItemHeader';
 import { OperatorChat } from './OperatorChat';
 import { Blocked, Buyers, TelegramTail } from './Rail';
 import { LiveThreads, RoomFeed } from './Threads';
+import { Wordmark } from './Wordmark';
 
 const CONN_LABEL: Record<Conn, string> = {
   loading: 'connecting',
@@ -57,8 +58,7 @@ export function Board() {
       {!room && (
         <aside className="side" aria-label="Operator chat">
           <header className="side__head">
-            <span className="brand">Lowball</span>
-            <span className="side__role">operator</span>
+            <Wordmark />
           </header>
           <OperatorChat onReply={refresh} mock={flags.mock} />
         </aside>
@@ -113,15 +113,12 @@ function TopBar({ state, conn, room, onRoom, itemId, onItem }: TopBarProps) {
   const working = queue ? queue.running + queue.waiting : 0;
   return (
     <div className="top">
-      {room && <span className="brand">Lowball</span>}
+      {room && <Wordmark />}
       <span className={`conn conn--${conn}`}>
         <i aria-hidden="true" />
         {CONN_LABEL[conn]}
       </span>
       {state?.sample && <span className="pill pill--warn">sample data</span>}
-      {state?.demoMode && !state.sample && (
-        <span className="pill">{state.clock.compressing ? `demo clock, 1 day = ${Math.round(86_400 / state.clock.rate)} s` : 'demo mode'}</span>
-      )}
       {queue && working > 0 && (
         <span className="pill pill--busy">
           answering {queue.running}

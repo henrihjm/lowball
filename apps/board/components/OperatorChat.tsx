@@ -64,8 +64,7 @@ export function OperatorChat({ onReply, mock }: Props) {
         <ThreadPrimitive.Viewport className="thread__viewport">
           <AuiIf condition={(s) => s.thread.isEmpty}>
             <div className="thread__empty">
-              <p className="thread__lead">Steer the agent in plain words.</p>
-              <p className="thread__sub">It confirms each action in one line and the panels update.</p>
+              <p className="thread__lead">Tell Lowball what to do.</p>
               <div className="suggestions">
                 {SUGGESTIONS.map((prompt) => (
                   <ThreadPrimitive.Suggestion key={prompt} prompt={prompt} send className="suggestion">

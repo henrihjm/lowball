@@ -91,9 +91,6 @@ export function ItemHeader({ item, now }: Props) {
           <div className="figure figure--small">
             <dt>Next drop</dt>
             <dd>{item.nextDecayAt ? fmtDay(item.nextDecayAt) : 'none'}</dd>
-            <small>
-              {item.decayPct}% every {item.decayEveryDays} days, never below floor
-            </small>
           </div>
         </dl>
       </div>
@@ -105,7 +102,7 @@ export function ItemHeader({ item, now }: Props) {
             <span className="item__address">{slot.address}</span>
           </>
         ) : (
-          <span className="item__noslot">No pickup booked yet. The address stays private until two hours before a confirmed slot.</span>
+          <span className="item__noslot">No pickup booked yet.</span>
         )}
       </div>
 
