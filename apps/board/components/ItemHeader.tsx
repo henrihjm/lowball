@@ -19,7 +19,8 @@ function useSlotLine(item: ItemView, now: () => number): { pickup: string; addre
   const pickup = `Pickup ${fmtDayTime(slot.startsAt)}${who ? `, ${who}` : ''}`;
   if (slot.status === 'completed') return { pickup, address: 'Picked up' };
   if (slot.addressSentAt) return { pickup, address: `Address sent ${fmtTime(slot.addressSentAt)}` };
-  return { pickup, address: `Address goes out in ${countdown(Date.parse(slot.addressAt) - now())}` };
+  const left = Date.parse(slot.addressAt) - now();
+  return { pickup, address: left > 0 ? `Address goes out in ${countdown(left)}` : 'Address going out now' };
 }
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;

@@ -59,7 +59,8 @@ const handlers: Record<string, (c: Clock) => Promise<void>> = {
       'schedule',
       'Address clock fired: two hours before the confirmed pickup.',
     );
-    await q("update slots set status = 'address_sent', address_sent_at = $2 where id = $1", [slot.id, now()]);
+    // Stamped with the clock's own due time: under compression one tick can overshoot by more than an hour.
+    await q("update slots set status = 'address_sent', address_sent_at = $2 where id = $1", [slot.id, c.due_at]);
   },
 
   async remind_buyer(c) {
