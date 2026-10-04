@@ -54,6 +54,9 @@ export async function seedDemo(opts: { fresh?: boolean } = {}): Promise<SeedResu
   ))!;
   await addClock('decay', new Date(at.getTime() + 3 * DAY_MS), { item_id: item.id });
 
+  const { researchChannels } = await import('../mastra/workflows/channels.js');
+  await researchChannels(item.id).catch(() => undefined);
+
   let buyers = 0;
   if (!opts.fresh) {
     const mail = (from: string, text: string) => handleInbound({ inboxId: inbox.inboxId, messageId: `${SIM_PREFIX}seed-${item.id.slice(0, 8)}-${++buyers}`, from, subject: SEED_TITLE, text });

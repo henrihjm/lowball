@@ -48,6 +48,10 @@ main{max-width:1080px;margin:0 auto;padding:8px 24px 96px}
 .card h2{font-size:17px;font-weight:600;margin:14px 2px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card .sub{margin:0 2px;color:var(--muted);font-size:15px;display:flex;justify-content:space-between;gap:12px}.card .sub b{color:var(--text);font-weight:600}
 .drop{display:block}.drop .photo{cursor:pointer;margin:0}.add{position:absolute;bottom:14px;right:14px;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);color:var(--text);font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px}
+.channels{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}.channels li{display:flex;align-items:center;gap:12px;padding:14px 2px;border-bottom:1px solid var(--line)}
+.channels li div{flex:1;min-width:0}.channels b{display:block;font-weight:600;font-size:16px}.channels li div span{color:var(--muted);font-size:14px}
+.st{font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;background:var(--soft);white-space:nowrap}.st.ok{color:var(--ok)}.st.muted{color:var(--muted)}.st.link{color:#fff;background:var(--text)}
+.channels form{display:block}.ghost{background:none;color:var(--muted);font-size:13px;font-weight:600;padding:6px 8px}
 .empty{background:var(--soft);border-radius:var(--r);padding:56px 24px;text-align:center;color:var(--muted)}
 .detail{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:56px;align-items:start;padding-top:12px}
 .detail .photo{aspect-ratio:1/1;font-size:120px}
@@ -138,10 +142,25 @@ export async function itemHtml(id: string, flash?: { ok?: string; err?: string }
           <div><label for="description">Description</label><textarea id="description" name="description" maxlength="2000">${h(r.description)}</textarea></div>
           <div class="actions"><button type="submit">Save</button>${flash?.ok ? `<span class="saved">${h(flash.ok)}</span>` : flash?.err ? `<span class="err">${h(flash.err)}</span>` : '<p class="hint">One ad. Lowball uses it everywhere.</p>'}</div>
         </form>
+        ${channelsHtml(key, r)}
         <div class="where">Buyers reach this ad at <b>${h(r.inbox_address ?? 'its Lowball inbox')}</b>${r.craigslist_url ? ` and on <a href="${h(r.craigslist_url)}"><b>Craigslist</b></a>` : ''}. Lowball answers every one of them.</div>
       </div>
     </section>`,
   );
+}
+
+function channelsHtml(key: string, r: Row): string {
+  const channels = r.channels ?? [];
+  if (channels.length === 0) return '';
+  const sold = r.status === 'sold';
+  const rows = channels
+    .map((c) => {
+      const state = sold || c.status === 'sold' ? '<span class="st muted">Sold</span>' : c.status === 'live' ? '<span class="st ok">Live</span>' : `<a class="st link" href="${h(c.url)}" target="_blank" rel="noopener">Post</a>`;
+      const toggle = sold || c.status === 'sold' ? '' : `<form method="post" action="/l/${key}/item/${r.id}/channel"><input type="hidden" name="name" value="${h(c.name)}"><input type="hidden" name="status" value="${c.status === 'live' ? 'ready' : 'live'}"><button class="ghost" type="submit">${c.status === 'live' ? 'Undo' : 'Mark posted'}</button></form>`;
+      return `<li><div><b>${h(c.name)}</b><span>${h(c.why)}</span></div>${toggle}${state}</li>`;
+    })
+    .join('');
+  return `<p class="label">Where it sells best</p><ul class="channels"><li><div><b>Lowball inbox</b><span>Every buyer is answered here</span></div><span class="st ${sold ? 'muted' : 'ok'}">${sold ? 'Sold' : 'Live'}</span></li>${rows}</ul>`;
 }
 
 /** Saves the ad fields. The negotiator reads these on every reply, so a change applies at once. */

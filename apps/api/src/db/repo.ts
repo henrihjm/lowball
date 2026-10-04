@@ -39,6 +39,7 @@ export interface Item {
   ebay_url: string | null;
   comps: Comp[] | null;
   kernel_live_view_url: string | null;
+  channels: { name: string; url: string; why: string; status: 'ready' | 'live' | 'sold' }[] | null;
   card_message_id: number | null;
   created_at: Date;
 }

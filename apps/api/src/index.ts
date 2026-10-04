@@ -10,6 +10,7 @@ import { ensureWebhook, hasWebhookSecret, mailEnabled, SIM_PREFIX, verifyWebhook
 import { startMailPoller } from './email/poller.js';
 import { env } from './env.js';
 import './mastra/index.js';
+import { setChannelStatus } from './mastra/workflows/channels.js';
 import { MCP_PATH, mcpServer } from './mastra/mcp.js';
 import { enqueueInbound, handleInbound, queueDepth, type InboundEmail } from './mastra/workflows/handleInbound.js';
 import { startScheduler } from './mastra/workflows/scheduler.js';
@@ -98,6 +99,14 @@ app.post('/l/:key/item/:id/photo', async (c) => {
   const body = await c.req.parseBody();
   const flash = await savePhoto(c.req.param('id'), body.photo);
   const html = await itemHtml(c.req.param('id'), flash);
+  return html ? c.html(html) : c.notFound();
+});
+app.post('/l/:key/item/:id/channel', async (c) => {
+  if (!keyOk(c.req.param('key'))) return c.notFound();
+  const body = await c.req.parseBody();
+  const status = body.status === 'live' ? 'live' : 'ready';
+  if (/^[0-9a-f-]{36}$/i.test(c.req.param('id')) && typeof body.name === 'string') await setChannelStatus(c.req.param('id'), body.name.slice(0, 60), status);
+  const html = await itemHtml(c.req.param('id'));
   return html ? c.html(html) : c.notFound();
 });
 app.get('/l/:key/photo/:id', async (c) => {

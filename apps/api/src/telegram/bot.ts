@@ -10,6 +10,7 @@ import { getItem, getUser } from '../db/repo.js';
 import { env } from '../env.js';
 import { gatewayModel, generateJson } from '../mastra/model.js';
 import type { Photo } from '../mastra/agents/identifier.js';
+import { researchChannels } from '../mastra/workflows/channels.js';
 import { postItem } from '../mastra/workflows/lifecycle.js';
 import { cardFor, listItem, setListingText, setPrice } from '../mastra/workflows/listItem.js';
 import { runOperator } from '../mastra/workflows/operator.js';
@@ -82,6 +83,9 @@ async function postAndAnnounce(ctx: Context, itemId: string): Promise<void> {
   );
   const url = listingsUrl();
   if (url) await ctx.reply(`All your listings and sales history: ${url}`, { link_preview_options: { is_disabled: true } });
+  // Where this is most likely to sell, researched per item.
+  const channels = await researchChannels(itemId).catch(() => []);
+  if (channels.length > 0) await ctx.reply(`Best places to sell this: ${channels.map((c) => c.name).join(', ')}. The ad is ready for each on your listings page.`);
   if (env.KERNEL_POSTING && env.KERNEL_API_KEY) {
     const { kernelPostCore } = await import('../mastra/tools/kernelPost.js');
     const posted = await kernelPostCore(itemId).catch(() => undefined);

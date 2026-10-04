@@ -10,6 +10,7 @@ import { notifyOwner } from '../../telegram/notify.js';
 import * as tpl from '../../telegram/templates.js';
 import { acceptOfferCore } from '../tools/acceptOffer.js';
 import { sendToBuyer } from '../tools/scheduleSlot.js';
+import { closeChannels } from './channels.js';
 
 export interface ItemStats {
   inquiries: number;
@@ -142,10 +143,13 @@ export async function markSold(itemId: string, cents: number): Promise<string> {
 
   const stats = await itemStats(itemId);
   const days = item.listed_at ? Math.max(0, Math.floor((at.getTime() - item.listed_at.getTime()) / DAY_MS)) : 0;
-  // Delisting through Kernel is P2. Until then the post has to come down by hand, and the summary says so.
-  const delisted = !item.craigslist_url;
+  // One sale closes the ad everywhere. Lowball's own inbox stops answering at once; ads that were
+  // live on outside marketplaces are marked sold here and named so they can be taken down.
+  const wasLive = await closeChannels(itemId);
+  const delisted = !item.craigslist_url && wasLive.length === 0;
   let text = tpl.soldSummary({ delisted, cents, inquiries: stats.inquiries, lowballs: stats.lowballs, scams: stats.scams, noshows: stats.noshows, days });
-  if (!delisted) text += ` Take the Craigslist post down: ${item.craigslist_url}`;
+  if (wasLive.length > 0) text += ` Marked sold everywhere. Take these down: ${wasLive.map((c) => c.name).join(', ')}.`;
+  else if (item.craigslist_url) text += ` Take the Craigslist post down: ${item.craigslist_url}`;
   return text;
 }
 

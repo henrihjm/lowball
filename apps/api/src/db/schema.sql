@@ -93,3 +93,6 @@ create table if not exists clocks (        -- scheduler queue
 create index if not exists clocks_due_idx on clocks (due_at) where done_at is null;
 
 insert into users (id) values ('henri') on conflict (id) do nothing;
+
+-- Where the ad is (or should be) listed: [{name, url, why, status}] with status ready|live|sold.
+alter table items add column if not exists channels jsonb;
