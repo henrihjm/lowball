@@ -12,10 +12,11 @@ let cached: { at: number; values: EnvMap } | undefined;
 function rootEnv(): EnvMap {
   if (cached && Date.now() - cached.at < 10_000) return cached.values;
   let values: EnvMap = {};
-  for (const file of [path.resolve(process.cwd(), '../../.env'), path.resolve(process.cwd(), '.env')]) {
-    if (!existsSync(file)) continue;
+  const cwd = process.cwd();
+  for (const file of [path.resolve(/*turbopackIgnore: true*/ cwd, '../../.env'), path.resolve(/*turbopackIgnore: true*/ cwd, '.env')]) {
+    if (!existsSync(/*turbopackIgnore: true*/ file)) continue;
     try {
-      values = { ...values, ...parseEnv(readFileSync(file, 'utf8')) };
+      values = { ...values, ...parseEnv(readFileSync(/*turbopackIgnore: true*/ file, 'utf8')) };
     } catch {
       // unreadable .env: fall through to process.env and defaults
     }

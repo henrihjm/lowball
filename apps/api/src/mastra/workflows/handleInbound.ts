@@ -213,7 +213,9 @@ export async function respond(buyerId: string, inboundId: string, opts: { bypass
   const ruleTime = parseBuyerTime(body, now(), windows);
   const heuristic = heuristicClassify(body, first.offerCents != null, Boolean(ruleTime), buyer.last_counter_cents != null);
   const lastOut = await q1<Message>("select body from messages where buyer_id = $1 and direction = 'out' and body is not null order by created_at desc limit 1", [buyerId]);
-  const cls = injection
+  // The model classifies only what rules cannot read. An explicit offer needs no second opinion,
+  // which keeps a lowball at one model call (the reply) when a room writes all at once.
+  const cls = injection || first.offerCents != null
     ? heuristic
     : await classifyInbound(body, { nowLocal: formatSlotLong(now()) + ` ${now().getFullYear()}`, lastAgentMessage: lastOut?.body, askDollars: ask / 100 }, heuristic);
 
@@ -423,6 +425,12 @@ export async function respond(buyerId: string, inboundId: string, opts: { bypass
     },
   };
   const written = await writeReply(brief);
+  // The negotiator may call blockBuyer on a clear scam the rules missed. A blocked buyer gets no reply.
+  if ((await getBuyer(buyerId))?.status === 'blocked') {
+    await finishInbound(inboundId, 'scam', offer);
+    await logNote(buyerId, 'scam', 'Blocked by the negotiator as a scam the rules did not catch. No reply.', floor, ask);
+    return { status: 'silent', buyerId, reason: 'scam_blocked' };
+  }
   // Belt and braces: whatever wrote it, nothing below the allowed minimum leaves.
   const finalCheck = validateReply(written.text, { floorCents: floor, minAllowedCents: brief.rules.minAllowedCents });
   if (!finalCheck.ok) throw new Error(`refusing to send a reply that fails validation: ${finalCheck.reasons.join('; ')}`);

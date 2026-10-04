@@ -193,9 +193,10 @@ export async function startTelegram(): Promise<void> {
         if (env.KERNEL_POSTING && env.KERNEL_API_KEY) {
           await ctx.reply('Posting it on Craigslist now.');
           const { kernelPostCore } = await import('../mastra/tools/kernelPost.js');
-          const posted = await kernelPostCore(id).catch((err) => ({ ok: false as const, reason: (err as Error).message }));
+          const posted = await kernelPostCore(id).catch((err) => ({ ok: false as const, reason: (err as Error).message, liveViewUrl: undefined }));
           if (posted.ok) {
-            await ctx.reply(tpl.afterPost(address));
+            // The form is filled in a Kernel browser. Photos and the final submit are one look away.
+            await ctx.reply(`The Craigslist form is filled in. Add the photos and submit here: ${posted.liveViewUrl}\nBuyers write to ${address}. I'll handle them and only message you for a decision.`, { link_preview_options: { is_disabled: true } });
             return;
           }
           await ctx.reply(`Craigslist posting did not go through (${posted.reason}).`);
