@@ -31,7 +31,12 @@ const CSS = `
 body{margin:0;background:var(--bg);color:var(--text);font:17px/1.47 -apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;letter-spacing:-.01em}
 a{color:inherit;text-decoration:none}
 nav{max-width:1080px;margin:0 auto;padding:22px 24px;display:flex;align-items:center;justify-content:space-between}
-.brand{font-weight:600;font-size:19px;letter-spacing:-.02em}.back{color:var(--muted);font-size:15px}
+.brand{font-weight:600;font-size:26px;letter-spacing:-.03em;display:inline-flex;align-items:baseline;padding-top:10px}
+.wb{flex:none;display:inline-block;position:relative;width:.64em;height:.72em;margin:0 .03em 0 .05em;transform-origin:.06em -.5em;animation:swing 2.6s cubic-bezier(.37,0,.22,1) .15s both}
+.wb:before{content:"";position:absolute;left:0;top:-.5em;width:.115em;height:1.2em;border-radius:.03em;background:currentColor}
+.wb:after{content:"";position:absolute;left:.02em;bottom:-.015em;width:.6em;height:.6em;border-radius:50%;background:currentColor}
+@keyframes swing{0%{transform:rotate(42deg)}22%{transform:rotate(-27deg)}42%{transform:rotate(16deg)}60%{transform:rotate(-9deg)}76%{transform:rotate(5deg)}89%{transform:rotate(-2deg)}100%{transform:rotate(0)}}
+@media (prefers-reduced-motion:reduce){.wb{animation:none}}.back{color:var(--muted);font-size:15px}
 main{max-width:1080px;margin:0 auto;padding:8px 24px 96px}
 .hero{padding:36px 0 40px}.hero h1{font-size:56px;line-height:1.05;font-weight:600;letter-spacing:-.035em;margin:0}.hero p{margin:10px 0 0;color:var(--muted);font-size:21px}
 .label{font-size:13px;font-weight:600;color:var(--muted);margin:40px 0 16px}
@@ -63,6 +68,9 @@ button{font:inherit;font-weight:600;color:#fff;background:var(--accent);border:0
 @media (max-width:820px){.detail{grid-template-columns:1fr;gap:28px}.hero h1{font-size:40px}.row{grid-template-columns:1fr}}
 `;
 
+/** The wordmark. The b is a wrecking ball: it swings in on load and settles into the letter. */
+const BRAND = (key: string) => `<a class="brand" href="/l/${key}" aria-label="Lowball"><span aria-hidden="true">Low</span><span class="wb" aria-hidden="true"></span><span aria-hidden="true">all</span></a>`;
+
 const page = (title: string, nav: string, body: string) =>
   `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${h(title)}</title><style>${CSS}</style></head><body><nav>${nav}</nav><main>${body}</main></body></html>`;
 
@@ -92,7 +100,7 @@ export async function listingsHtml(): Promise<string> {
   const sub = live.length > 0 ? 'Lowball is handling every buyer. You get a calendar invite when a pickup is booked.' : 'Send a photo to the Telegram bot. That is all it takes.';
   return page(
     'Lowball',
-    `<a class="brand" href="/l/${key}">Lowball</a><span class="back">${live.length} selling · ${sold.length} sold</span>`,
+    `${BRAND(key)}<span class="back">${live.length} selling · ${sold.length} sold</span>`,
     `<section class="hero"><h1>${h(headline)}</h1><p>${h(sub)}</p></section>
      ${live.length > 0 ? `<div class="grid">${live.map(card).join('')}</div>` : '<div class="empty">Your listings appear here.</div>'}
      ${sold.length > 0 ? `<p class="label">Sold</p><div class="grid">${sold.map(card).join('')}</div>` : ''}`,
@@ -109,7 +117,7 @@ export async function itemHtml(id: string, flash?: { ok?: string; err?: string }
   const now = sold ? `Sold for ${dollars(r.sold_cents)}` : r.pickup_at ? `Pickup booked: ${formatSlotLong(r.pickup_at)} with ${r.pickup_name} at ${dollars(r.pickup_cents)}` : r.best_cents != null ? `Best offer so far ${dollars(r.best_cents)}` : 'Listed. Waiting for buyers.';
   return page(
     r.title ?? 'Item',
-    `<a class="brand" href="/l/${key}">Lowball</a><a class="back" href="/l/${key}">All listings</a>`,
+    `${BRAND(key)}<a class="back" href="/l/${key}">All listings</a>`,
     `<section class="detail">
       <form class="drop" method="post" action="/l/${key}/item/${r.id}/photo" enctype="multipart/form-data">
         <label class="photo" for="file"${photoStyle(key, r)}>${initial(r)}<span class="pill ${s.cls}">${h(s.text)}</span><span class="add">${hasPhoto(r) ? 'Change photo' : 'Add photo'}</span></label>
