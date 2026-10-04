@@ -62,7 +62,10 @@ async function download(fileId: string): Promise<{ bytes: Buffer; mime: string }
 /** First photo of an item, for the board. The bot token never leaves this process. */
 export async function itemPhoto(itemId: string): Promise<{ bytes: Buffer; mime: string } | undefined> {
   const item = await getItem(itemId);
-  const fileId = item?.photos?.[0]?.telegram_file_id;
+  const first = item?.photos?.[0] as { telegram_file_id?: string; data?: string; mime?: string } | undefined;
+  // A photo added on the web app is stored with the item; one from Telegram is fetched by file id.
+  if (first?.data) return { bytes: Buffer.from(first.data, 'base64'), mime: first.mime ?? 'image/jpeg' };
+  const fileId = first?.telegram_file_id;
   if (!fileId || !bot) return undefined;
   return download(fileId).catch(() => undefined);
 }

@@ -25,7 +25,7 @@ export interface Item {
   title: string | null;
   description: string | null;
   condition_notes: string | null;
-  photos: { telegram_file_id?: string; url?: string }[] | null;
+  photos: { telegram_file_id?: string; url?: string; data?: string; mime?: string }[] | null;
   ask_cents: number | null;
   floor_cents: number | null;
   decay_pct: number;
