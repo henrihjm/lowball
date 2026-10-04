@@ -15,6 +15,7 @@ import { enqueueInbound, handleInbound, queueDepth, type InboundEmail } from './
 import { startScheduler } from './mastra/workflows/scheduler.js';
 import { runOperator } from './mastra/workflows/operator.js';
 import { operatorRequest } from '@lowball/shared';
+import { listingsHtml, listingsKey } from './listings.js';
 import { boardState } from './state.js';
 import { itemPhoto, startTelegram, telegramStatus } from './telegram/bot.js';
 
@@ -76,6 +77,16 @@ app.post('/webhooks/agentmail', async (c) => {
     enqueueInbound(ev);
   }
   return c.body(null, 204);
+});
+
+// Henri's listings page. The key in the path is the access control.
+const keyOk = (k: string) => Boolean(env.API_TOKEN) && k === listingsKey();
+app.get('/l/:key', async (c) => (keyOk(c.req.param('key')) ? c.html(await listingsHtml()) : c.notFound()));
+app.get('/l/:key/photo/:id', async (c) => {
+  if (!keyOk(c.req.param('key'))) return c.notFound();
+  const photo = await itemPhoto(c.req.param('id'));
+  if (!photo) return c.notFound();
+  return c.body(new Uint8Array(photo.bytes), 200, { 'content-type': photo.mime, 'cache-control': 'private, max-age=600' });
 });
 
 app.use('/api/*', requireToken);

@@ -6,6 +6,8 @@ import { q, q1 } from '../../db/client.js';
 import { activeSlot, addClock, firstName, getBuyer, getItem, getUser, logOutbound, type Buyer, type Message } from '../../db/repo.js';
 import { now } from '../../demo/clock.js';
 import { replyInThread } from '../../email/agentmail.js';
+import { sendPickupInvite } from '../../email/invite.js';
+import { listingsUrl } from '../../listings.js';
 import { PENDING_REPLY } from '../../policy/negotiation.js';
 import { formatSlotLong, isInsideWindows, parseWindows } from '../../policy/windows.js';
 import { notifyOwner } from '../../telegram/notify.js';
@@ -86,7 +88,19 @@ export async function scheduleSlotCore(buyerId: string, startsAt: Date, opts: { 
     );
   }
 
-  await notifyOwner(pickupBooked(firstName(buyer), buyer.agreed_cents, formatSlotLong(startsAt)));
+  const invited = await sendPickupInvite({
+    slotId: slot.id,
+    itemTitle: item.title ?? 'item',
+    buyerName: firstName(buyer),
+    cents: buyer.agreed_cents,
+    startsAt,
+    spot: user.meeting_spot,
+    payment: user.payment_methods,
+    inboxId: item.inbox_id!,
+    inboxAddress: item.inbox_address ?? '',
+    listingsUrl: listingsUrl(),
+  });
+  await notifyOwner(`${pickupBooked(firstName(buyer), buyer.agreed_cents, formatSlotLong(startsAt))}${invited ? ' The calendar invite is in your email.' : ''}`);
   return { ok: true, slotId: slot.id, startsAt };
 }
 

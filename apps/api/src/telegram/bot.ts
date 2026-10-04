@@ -15,6 +15,8 @@ import { cardFor, listItem, setListingText, setPrice } from '../mastra/workflows
 import { runOperator } from '../mastra/workflows/operator.js';
 import { markSold } from '../mastra/workflows/lifecycle.js';
 import { resolveDecision } from '../mastra/workflows/resolve.js';
+import { listingsUrl } from '../listings.js';
+import { dollars } from '../policy/pricing.js';
 import { parseWindows } from '../policy/windows.js';
 import { setNotifier, type Button } from './notify.js';
 import * as tpl from './templates.js';
@@ -67,8 +69,25 @@ export async function itemPhoto(itemId: string): Promise<{ bytes: Buffer; mime: 
 
 const groups = new Map<string, { fileIds: string[]; caption?: string; timer?: NodeJS.Timeout; ctx: Context }>();
 
+/** Posts the item and tells Henri: what it is listed at, and where all his listings live. */
+async function postAndAnnounce(ctx: Context, itemId: string): Promise<void> {
+  const address = await postItem(itemId);
+  const item = (await getItem(itemId))!;
+  await ctx.reply(
+    `Posted for sale: ${item.title}. Ask ${dollars(item.ask_cents)}, floor ${dollars(item.floor_cents)}, drops ${Number(item.decay_pct)}% every ${item.decay_every_days} days to the floor.\n"${item.description ?? ''}"\nBuyers write to ${address}. I handle them from here. The next thing you get is a calendar invite for the pickup.`,
+    { reply_markup: keyboard([{ text: 'Change price', data: `i:${itemId}:price` }, { text: 'Edit text', data: `i:${itemId}:text` }]) },
+  );
+  const url = listingsUrl();
+  if (url) await ctx.reply(`All your listings and sales history: ${url}`, { link_preview_options: { is_disabled: true } });
+  if (env.KERNEL_POSTING && env.KERNEL_API_KEY) {
+    const { kernelPostCore } = await import('../mastra/tools/kernelPost.js');
+    const posted = await kernelPostCore(itemId).catch(() => undefined);
+    if (posted?.ok) await ctx.reply(`The Craigslist form is filled in. Add the ZIP code and photos and submit: ${posted.liveViewUrl}`, { link_preview_options: { is_disabled: true } });
+  }
+}
+
 async function processPhotos(ctx: Context, fileIds: string[], caption?: string): Promise<void> {
-  await ctx.reply('Looking at it.');
+  await ctx.reply(`Got the photo${fileIds.length > 1 ? 's' : ''}. Looking at ${fileIds.length > 1 ? 'them' : 'it'}.`);
   try {
     const photos: Photo[] = [];
     for (const id of fileIds.slice(0, 3)) {
@@ -80,9 +99,18 @@ async function processPhotos(ctx: Context, fileIds: string[], caption?: string):
       await ctx.reply(card.error);
       return;
     }
-    const sent = await ctx.reply(card.text, { reply_markup: keyboard(card.buttons) });
-    await q('update items set card_message_id = $2 where id = $1', [card.itemId, sent.message_id]);
-    if (card.needsPrice) awaiting = { kind: 'price', itemId: card.itemId };
+    const item = (await getItem(card.itemId))!;
+    if (card.needsPrice) {
+      // Too few comparable sales to price it honestly: the one question Henri is asked.
+      await ctx.reply(card.text);
+      awaiting = { kind: 'price', itemId: card.itemId };
+      return;
+    }
+    const prices = (item.comps ?? []).map((c) => c.price_cents);
+    await ctx.reply(
+      `${item.title}. ${item.condition_notes ? item.condition_notes[0]!.toUpperCase() + item.condition_notes.slice(1) : 'Condition as pictured'}. Similar ones go for ${dollars(Math.min(...prices))} to ${dollars(Math.max(...prices))} (${prices.length} comparable listings).`,
+    );
+    await postAndAnnounce(ctx, card.itemId);
   } catch (err) {
     console.error('[telegram] photo failed:', err);
     await ctx.reply('That did not work. Send the photo again, with a caption saying what it is.');
@@ -232,16 +260,15 @@ export async function startTelegram(): Promise<void> {
           return;
         }
         awaiting = undefined;
-        const card = await cardFor(pending.itemId);
-        const sent = await ctx.reply(card.text, { reply_markup: keyboard(card.buttons) });
-        await q('update items set card_message_id = $2 where id = $1', [pending.itemId, sent.message_id]);
+        const priced = (await getItem(pending.itemId))!;
+        if (priced.status === 'draft') await postAndAnnounce(ctx, pending.itemId);
+        else await ctx.reply(`Price updated: ask ${dollars(priced.ask_cents)}, floor ${dollars(priced.floor_cents)}.`);
         return;
       }
       if (pending?.kind === 'text') {
         awaiting = undefined;
         await setListingText(pending.itemId, text);
-        const card = await cardFor(pending.itemId);
-        await ctx.reply(card.text, { reply_markup: keyboard(card.buttons) });
+        await ctx.reply('Listing text updated.');
         return;
       }
       if (pending?.kind === 'amount') {

@@ -204,7 +204,7 @@ async function ensureDigestClock(): Promise<void> {
 export async function startScheduler(): Promise<NodeJS.Timeout> {
   // Virtual time never starts behind what the database has already recorded.
   const latest = await q1<{ t: Date | null }>('select max(created_at) as t from messages');
-  if (env.DEMO_MODE && latest?.t) startAt(latest.t.getTime());
+  if (env.DEMO_MODE && env.DEMO_CLOCK !== 'off' && latest?.t) startAt(latest.t.getTime());
   await ensureDigestClock();
   return setInterval(() => void tick().catch((err) => console.error('[clock] tick failed:', err)), env.DEMO_MODE ? 500 : 5_000);
 }

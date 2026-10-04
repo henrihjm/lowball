@@ -41,6 +41,10 @@ export const env = {
   get PUBLIC_BASE_URL() { return str('PUBLIC_BASE_URL').replace(/\/+$/, ''); },
   /** Shared secret between the board's server routes, the demo scripts and this API. */
   get API_TOKEN() { return str('LOWBALL_API_TOKEN'); },
+  /** Where the pickup calendar invite goes. */
+  get OWNER_EMAIL() { return str('OWNER_EMAIL'); },
+  /** Autonomous: no Telegram decisions before the pickup. Henri's flow is photo in, calendar invite out. */
+  get AUTONOMOUS() { return !/^(0|false|no|off)$/i.test(str('AUTONOMOUS')); },
   get DEMO_MODE() { return flag('DEMO_MODE'); },
   get DEMO_CLOCK() { return (str('DEMO_CLOCK') || 'auto') as 'auto' | 'always' | 'off'; },
   get KERNEL_POSTING() { return flag('KERNEL_POSTING'); },
