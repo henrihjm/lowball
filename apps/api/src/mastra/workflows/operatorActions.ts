@@ -159,5 +159,24 @@ export async function craigslist(): Promise<string> {
   return `Craigslist posting did not go through (${res.reason}).${res.liveViewUrl ? ` Live view: ${res.liveViewUrl}` : ''} Post by hand with contact email ${item.inbox_address}.`;
 }
 
+/** "no-show": the last sale did not happen. Reopen the item and move to the next buyer. */
+export async function noShow(): Promise<string> {
+  const active = await currentItem();
+  const slot = active ? await activeSlot(active.id) : undefined;
+  if (active && slot) {
+    const { handleNoShow } = await import('./lifecycle.js');
+    return handleNoShow(slot, { promote: true });
+  }
+  const sold = await q1<Item>("select * from items where status = 'sold' order by sold_at desc limit 1");
+  if (!sold) return 'Nothing to reopen.';
+  await q("update items set status = 'listed', sold_at = null, sold_cents = null where id = $1", [sold.id]);
+  await q("update slots set status = 'noshow' where item_id = $1 and status = 'completed'", [sold.id]);
+  await q("update buyers set status = case when status = 'closed' and agreed_cents is not null then 'backup' else status end where item_id = $1", [sold.id]);
+  await q("update buyers set status = 'noshow' where id in (select buyer_id from slots where item_id = $1 and status = 'noshow')", [sold.id]);
+  const { promoteBackup } = await import('./lifecycle.js');
+  const next = await promoteBackup(sold.id);
+  return `Reopened ${sold.title} at ${dollars(sold.ask_cents)}.${next ? ` Offered it to the next buyer, ${firstName(next)}.` : ' No backup in the queue, so it is back on the market.'}`;
+}
+
 export const HELP =
   'Try: status · digest · floor 150 · ask 200 · show buyer 2 · take best offer · sold 180 · pause · relist · delete · spot <where> · windows <days and times>. In demo mode: fast forward · pause clock.';

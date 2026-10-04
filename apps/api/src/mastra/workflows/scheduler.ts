@@ -11,7 +11,7 @@ import * as tpl from '../../telegram/templates.js';
 import { sendToBuyer } from '../tools/scheduleSlot.js';
 import { createDecision } from './decisions.js';
 import { respond } from './handleInbound.js';
-import { handleNoShow, sendDigest, topBackup } from './lifecycle.js';
+import { handleNoShow, markSold, sendDigest, topBackup } from './lifecycle.js';
 
 const SLOT_KINDS = ['day_of', 'send_address', 'remind_buyer', 'preempt_noshow', 'check_noshow', 'sold_check'];
 const HOLD_MS = parseInt(process.env.DEMO_HOLD_SECONDS ?? '20', 10) * 1000;
@@ -104,6 +104,7 @@ const handlers: Record<string, (c: Clock) => Promise<void>> = {
     if (!slot || !['confirmed', 'address_sent', 'reminded'].includes(slot.status)) return;
     const item = (await getItem(slot.item_id))!;
     if (item.status === 'sold' || slot.buyer_confirmed_at) return; // confirmed buyers get the sold check instead
+    if (env.AUTONOMOUS) return; // autonomous: the sale is closed out at the sold check; Henri says "no-show" if it fell through
     await notifyOwner(await handleNoShow(slot, { promote: true }));
   },
 
@@ -113,6 +114,12 @@ const handlers: Record<string, (c: Clock) => Promise<void>> = {
     const item = (await getItem(slot.item_id))!;
     if (item.status === 'sold') return;
     const buyer = (await getBuyer(slot.buyer_id))!;
+    if (env.AUTONOMOUS) {
+      // Henri is told, not asked. One word from him ("no-show") reopens it and promotes the backup.
+      const summary = await markSold(item.id, buyer.agreed_cents ?? item.ask_cents ?? 0);
+      await notifyOwner(`${summary}\nIf ${firstName(buyer)} did not show up, reply "no-show" and I'll reopen it and move to the next buyer.`);
+      return;
+    }
     await createDecision({
       kind: 'sold_check',
       itemId: item.id,

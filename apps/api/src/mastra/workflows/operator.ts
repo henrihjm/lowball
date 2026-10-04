@@ -17,6 +17,7 @@ async function direct(text: string): Promise<string | undefined> {
   if ((m = t.match(/^(?:(?:drop|set|lower|raise|change|move|put)\s+)?(?:the\s+)?(?:ask|price|asking(?:\s+price)?)\s*(?:to|at|=|:)?\s*\$?\s*([\d,.]+)$/i))) return act.setAsk(num(m[1]!));
   if (/^(fast[\s-]?forward|ff|speed up|resume clock)$/i.test(t)) return act.clock('fast_forward');
   if (/^(pause|stop|freeze)\s+(the\s+)?clock$/i.test(t)) return act.clock('pause');
+  if (/^(no[\s-]?show|didn'?t show|they didn'?t come)\.?$/i.test(t)) return act.noShow();
   if (/^pause$/i.test(t)) return act.pause();
   if (/^(relist|resume|unpause)$/i.test(t)) return act.relistItem();
   if ((m = t.match(/^sold(?:\s+(?:for\s+)?\$?\s*([\d,.]+))?$/i))) return act.sold(m[1] ? num(m[1]) : undefined);
