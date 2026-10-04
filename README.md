@@ -6,6 +6,22 @@ Selling your own stuff is thirty messages with strangers, half of them lowballs 
 
 Built at the Build Personal Agents Hack, San Francisco, October 4 2026.
 
+## The flow: photo in, calendar invite out
+
+1. You send a photo on Telegram. Lowball confirms it, says what the item is and what similar ones sell for.
+2. It prices the item from real comparables (a wider search and then a labelled estimate when comps are thin), posts it, and sends a link to your listings.
+3. It researches the 3 to 5 marketplaces where that item is most likely to sell, including niche ones, and tracks the ad on each.
+4. It answers every buyer by email, on its own: counters, holds the floor, keeps to your pickup windows, blocks scams. It asks you nothing.
+5. When a pickup is booked you get a calendar invite by email. After the pickup the sale closes itself and the ad is marked sold everywhere. If the buyer did not come, reply "no-show".
+
+`AUTONOMOUS=false` brings back the Telegram decision buttons (below-floor offers, times outside your windows, borderline scams).
+
+## The owner web app
+
+`/l/<key>` on the API is the owner's app: every listing as a photo card, and one page per item with the ad as five editable fields (title, price, lowest price, condition, description), the photo, and the marketplaces the ad belongs on. Saving applies to every reply from that moment. The key in the URL is the only access control, so treat the link as private.
+
+Not automated yet: publishing and removing the ad on outside marketplaces. Lowball researches where it should go, opens each site's posting page, tracks what is live, and marks everything sold on a sale; Craigslist has a Kernel-driven form fill. The posts themselves still go up and come down by hand.
+
 ## The one idea
 
 **The model writes the words. Code decides the numbers.**
@@ -84,7 +100,7 @@ The browser only talks to the board's own routes; those proxy to the API and att
 
 - **Direct email mode.** Any email to the demo inbox, from any sender, is a buyer on the seeded item. No Craigslist relay in the loop, so a room can email the address on the screen.
 - **Rate limits off.** Outside demo mode a buyer gets at most one reply per 10 minutes.
-- **Clock compression: 1 day = 5 seconds.** All time goes through `apps/api/src/demo/clock.ts`. `DEMO_CLOCK=auto` (default) compresses only while a confirmed pickup is waiting on its clocks, and returns to real time for 20 seconds after the reminder so the buyer can answer it. That keeps the price still while people are negotiating. `DEMO_CLOCK=always` compresses from boot. In the operator chat, "fast forward" and "pause clock" switch it by hand.
+- **Clock compression: 1 day = 5 seconds** (`DEMO_CLOCK=auto`; the deployed app runs `DEMO_CLOCK=off`, real time, so calendar invites carry real dates). All time goes through `apps/api/src/demo/clock.ts`. `DEMO_CLOCK=auto` (default) compresses only while a confirmed pickup is waiting on its clocks, and returns to real time for 20 seconds after the reminder so the buyer can answer it. That keeps the price still while people are negotiating. `DEMO_CLOCK=always` compresses from boot. In the operator chat, "fast forward" and "pause clock" switch it by hand.
 
 ## Lowball as a tool for other agents (MCP)
 
