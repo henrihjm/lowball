@@ -50,6 +50,10 @@ main{max-width:1080px;margin:0 auto;padding:8px 24px 96px}
 .ico{flex:none;width:32px;height:32px;border-radius:8px;background:var(--soft);object-fit:contain}.ico.own{background:var(--text);border-radius:50%}
 .st{font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;background:var(--soft);white-space:nowrap}.st.ok{color:var(--ok)}.st.muted{color:var(--muted)}.st.link{color:#fff;background:var(--text)}
 .channels form{display:block}.ghost{background:none;color:var(--muted);font-size:13px;font-weight:600;padding:6px 8px}
+.sell{display:inline-block;margin-top:26px;background:var(--accent);color:#fff;font-weight:600;font-size:19px;padding:16px 34px;border-radius:999px;cursor:pointer;transition:opacity .15s}.sell:hover{opacity:.88}
+#busy{position:fixed;inset:0;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;z-index:10}#busy[hidden]{display:none}
+#busy p{font-size:28px;font-weight:600;letter-spacing:-.025em;margin:0}.spin{width:22px;height:22px;border-radius:50%;background:var(--text);animation:hang 1.1s ease-in-out infinite alternate;transform-origin:50% -70px}
+@keyframes hang{from{transform:rotate(26deg)}to{transform:rotate(-26deg)}}
 .empty{background:var(--soft);border-radius:var(--r);padding:56px 24px;text-align:center;color:var(--muted)}
 .detail{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:56px;align-items:start;padding-top:12px}
 .detail .photo{aspect-ratio:1/1;font-size:120px}
@@ -75,6 +79,13 @@ const BRAND = (key: string) =>
   `<a class="brand" href="/l/${key}" aria-label="Lowball"><span aria-hidden="true">Low</span><svg class="wb" id="wb" viewBox="-8 -7 16 14" aria-hidden="true"><path d="M0,-40 Q0,-20 0,0"/><circle cx="0" cy="0" r="7"/></svg><span aria-hidden="true">all</span></a>`;
 
 /** The wrecking ball hangs on a wire that bends. It swings when the page opens and when it is clicked, and at no other time. */
+/** Photo from the camera -> downscaled in the browser -> identified, priced, posted -> its listing page. */
+const SELL_SCRIPT = (key: string) => `<script>(function(){var input=document.getElementById('cam'),busy=document.getElementById('busy'),txt=document.getElementById('busytext');if(!input)return;
+var steps=['Looking at it','Finding what these sell for','Setting the price','Writing the ad','Choosing where to sell it'];
+function shrink(file){return new Promise(function(res,rej){var img=new Image();img.onload=function(){var m=1400,sc=Math.min(1,m/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);c.toBlob(function(b){b?res(b):rej(new Error('photo'));},'image/jpeg',0.86);};img.onerror=function(){rej(new Error('photo'));};img.src=URL.createObjectURL(file);});}
+input.addEventListener('change',function(){var f=input.files&&input.files[0];if(!f)return;busy.hidden=false;var i=0;txt.textContent=steps[0];var timer=setInterval(function(){i=Math.min(i+1,steps.length-1);txt.textContent=steps[i];},3800);
+shrink(f).then(function(blob){var fd=new FormData();fd.append('photo',blob,'photo.jpg');return fetch('/l/${key}/sell',{method:'POST',body:fd});}).then(function(r){return r.json();}).then(function(d){clearInterval(timer);if(d.url){txt.textContent='Listed';location.href=d.url;}else{busy.hidden=true;input.value='';alert(d.error||'That did not work. Try again.');}}).catch(function(){clearInterval(timer);busy.hidden=true;input.value='';alert('That did not work. Try again.');});});})();</script>`;
+
 const SWING = `<script>(function(){var s=document.getElementById('wb');if(!s)return;var p=s.querySelector('path'),c=s.querySelector('circle'),L=40,Y=-40,t0=0,raf=0,amp=0;
 function draw(th,om){var x=L*Math.sin(th),y=Y+L*Math.cos(th);var cx=x*0.5-om*2.4,cy=Y+(y-Y)*0.55;p.setAttribute('d','M0,'+Y+' Q'+cx.toFixed(2)+','+cy.toFixed(2)+' '+x.toFixed(2)+','+y.toFixed(2));c.setAttribute('cx',x.toFixed(2));c.setAttribute('cy',y.toFixed(2));}
 function frame(now){if(!t0)t0=now;var t=(now-t0)/1000,k=0.95,w=5.4,e=amp*Math.exp(-k*t);var th=e*Math.cos(w*t),om=e*(-k*Math.cos(w*t)-w*Math.sin(w*t))/w;draw(th,om);if(e>0.004){raf=requestAnimationFrame(frame);}else{draw(0,0);raf=0;}}
@@ -111,7 +122,12 @@ export async function listingsHtml(): Promise<string> {
   return page(
     'Lowball',
     `${BRAND(key)}<span class="back">${live.length} selling · ${sold.length} sold</span>`,
-    `<section class="hero"><h1>${h(headline)}</h1><p>${h(sub)}</p></section>
+    `<section class="hero"><h1>${h(headline)}</h1><p>${h(sub)}</p>
+       <label class="sell" for="cam">Sell something</label>
+       <input id="cam" type="file" accept="image/*" capture="environment" hidden>
+     </section>
+     <div id="busy" hidden><div class="spin"></div><p id="busytext">Looking at it</p></div>
+     ${SELL_SCRIPT(key)}
      ${live.length > 0 ? `<div class="grid">${live.map(card).join('')}</div>` : '<div class="empty">Your listings appear here.</div>'}
      ${sold.length > 0 ? `<p class="label">Sold</p><div class="grid">${sold.map(card).join('')}</div>` : ''}`,
   );
@@ -211,4 +227,26 @@ export async function savePhoto(id: string, file: unknown): Promise<{ ok?: strin
   const data = Buffer.from(await file.arrayBuffer()).toString('base64');
   await q("update items set photos = $2::jsonb where id = $1 and status <> 'deleted'", [id, JSON.stringify([{ data, mime: file.type }])]);
   return { ok: 'Photo saved.' };
+}
+
+/** The web app's camera flow: one photo in, a live listing out. Returns the new item's page. */
+export async function sellFromPhoto(file: unknown): Promise<{ url?: string; error?: string }> {
+  if (!(file instanceof File) || file.size === 0) return { error: 'No photo came through. Try again.' };
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return { error: 'Use a JPEG or PNG photo.' };
+  if (file.size > 6_000_000) return { error: 'That photo is too large.' };
+  const base64 = Buffer.from(await file.arrayBuffer()).toString('base64');
+  const { identify } = await import('./mastra/agents/identifier.js');
+  const { draftItem } = await import('./mastra/workflows/listItem.js');
+  const { postItem } = await import('./mastra/workflows/lifecycle.js');
+  const { researchChannels } = await import('./mastra/workflows/channels.js');
+  const id = await identify([{ base64, mime: file.type }], null);
+  if (!id) return { error: 'I could not tell what this is. Take the photo again, closer and with the whole item in frame.' };
+  const card = await draftItem({ title: id.title, condition: id.condition, notes: id.notes, searchQuery: id.search_query });
+  await q('update items set photos = $2::jsonb where id = $1', [card.itemId, JSON.stringify([{ data: base64, mime: file.type }])]);
+  const item = await q1<Item>('select * from items where id = $1', [card.itemId]);
+  if (item?.ask_cents == null) return { error: 'I could not find enough to price this one. Try another photo.' };
+  await postItem(card.itemId);
+  // Marketplace research runs behind the redirect: the listing is live a few seconds sooner.
+  void researchChannels(card.itemId).catch(() => undefined);
+  return { url: `/l/${listingsKey()}/item/${card.itemId}` };
 }

@@ -16,8 +16,9 @@ import { enqueueInbound, handleInbound, queueDepth, type InboundEmail } from './
 import { startScheduler } from './mastra/workflows/scheduler.js';
 import { runOperator } from './mastra/workflows/operator.js';
 import { operatorRequest } from '@lowball/shared';
-import { itemHtml, listingsHtml, listingsKey, saveItem, savePhoto } from './listings.js';
+import { itemHtml, listingsHtml, listingsKey, saveItem, savePhoto, sellFromPhoto } from './listings.js';
 import { boardState } from './state.js';
+import { notifyOwner } from './telegram/notify.js';
 import { itemPhoto, startTelegram, telegramStatus } from './telegram/bot.js';
 
 const app = new Hono<{ Bindings: HttpBindings }>();
@@ -108,6 +109,18 @@ app.post('/l/:key/item/:id/channel', async (c) => {
   if (/^[0-9a-f-]{36}$/i.test(c.req.param('id')) && typeof body.name === 'string') await setChannelStatus(c.req.param('id'), body.name.slice(0, 60), status);
   const html = await itemHtml(c.req.param('id'));
   return html ? c.html(html) : c.notFound();
+});
+app.post('/l/:key/sell', async (c) => {
+  if (!keyOk(c.req.param('key'))) return c.notFound();
+  try {
+    const body = await c.req.parseBody();
+    const out = await sellFromPhoto(body.photo);
+    if (out.url) await notifyOwner(`Listed from the web app. ${env.PUBLIC_BASE_URL}${out.url}`);
+    return c.json(out, out.url ? 200 : 422);
+  } catch (err) {
+    console.error('[sell] failed:', err);
+    return c.json({ error: 'That did not work. Try again.' }, 500);
+  }
 });
 app.get('/l/:key/photo/:id', async (c) => {
   if (!keyOk(c.req.param('key'))) return c.notFound();
