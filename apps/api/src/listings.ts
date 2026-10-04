@@ -32,11 +32,7 @@ body{margin:0;background:var(--bg);color:var(--text);font:17px/1.47 -apple-syste
 a{color:inherit;text-decoration:none}
 nav{max-width:1080px;margin:0 auto;padding:22px 24px;display:flex;align-items:center;justify-content:space-between}
 .brand{font-weight:600;font-size:26px;letter-spacing:-.03em;display:inline-flex;align-items:baseline;padding-top:10px}
-.wb{flex:none;display:inline-block;position:relative;width:.64em;height:.72em;margin:0 .03em 0 .05em;transform-origin:.06em -.5em;animation:swing 2.6s cubic-bezier(.37,0,.22,1) .15s both}
-.wb:before{content:"";position:absolute;left:0;top:-.5em;width:.115em;height:1.2em;border-radius:.03em;background:currentColor}
-.wb:after{content:"";position:absolute;left:.02em;bottom:-.015em;width:.6em;height:.6em;border-radius:50%;background:currentColor}
-@keyframes swing{0%{transform:rotate(42deg)}22%{transform:rotate(-27deg)}42%{transform:rotate(16deg)}60%{transform:rotate(-9deg)}76%{transform:rotate(5deg)}89%{transform:rotate(-2deg)}100%{transform:rotate(0)}}
-@media (prefers-reduced-motion:reduce){.wb{animation:none}}.back{color:var(--muted);font-size:15px}
+.wb{flex:none;width:.62em;height:.56em;margin:0 .04em;overflow:visible;cursor:pointer;align-self:baseline}.wb path{fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round}.wb circle{fill:currentColor}.back{color:var(--muted);font-size:15px}
 main{max-width:1080px;margin:0 auto;padding:8px 24px 96px}
 .hero{padding:36px 0 40px}.hero h1{font-size:56px;line-height:1.05;font-weight:600;letter-spacing:-.035em;margin:0}.hero p{margin:10px 0 0;color:var(--muted);font-size:21px}
 .label{font-size:13px;font-weight:600;color:var(--muted);margin:40px 0 16px}
@@ -50,6 +46,8 @@ main{max-width:1080px;margin:0 auto;padding:8px 24px 96px}
 .drop{display:block}.drop .photo{cursor:pointer;margin:0}.add{position:absolute;bottom:14px;right:14px;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);color:var(--text);font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px}
 .channels{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}.channels li{display:flex;align-items:center;gap:12px;padding:14px 2px;border-bottom:1px solid var(--line)}
 .channels li div{flex:1;min-width:0}.channels b{display:block;font-weight:600;font-size:16px}.channels li div span{color:var(--muted);font-size:14px}
+.icons{display:flex;gap:6px;align-items:center}.icons .ico{width:20px;height:20px;border-radius:5px}.icons .ico.own{border-radius:50%}
+.ico{flex:none;width:32px;height:32px;border-radius:8px;background:var(--soft);object-fit:contain}.ico.own{background:var(--text);border-radius:50%}
 .st{font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;background:var(--soft);white-space:nowrap}.st.ok{color:var(--ok)}.st.muted{color:var(--muted)}.st.link{color:#fff;background:var(--text)}
 .channels form{display:block}.ghost{background:none;color:var(--muted);font-size:13px;font-weight:600;padding:6px 8px}
 .empty{background:var(--soft);border-radius:var(--r);padding:56px 24px;text-align:center;color:var(--muted)}
@@ -73,10 +71,18 @@ button{font:inherit;font-weight:600;color:#fff;background:var(--accent);border:0
 `;
 
 /** The wordmark. The b is a wrecking ball: it swings in on load and settles into the letter. */
-const BRAND = (key: string) => `<a class="brand" href="/l/${key}" aria-label="Lowball"><span aria-hidden="true">Low</span><span class="wb" aria-hidden="true"></span><span aria-hidden="true">all</span></a>`;
+const BRAND = (key: string) =>
+  `<a class="brand" href="/l/${key}" aria-label="Lowball"><span aria-hidden="true">Low</span><svg class="wb" id="wb" viewBox="-8 -7 16 14" aria-hidden="true"><path d="M0,-40 Q0,-20 0,0"/><circle cx="0" cy="0" r="7"/></svg><span aria-hidden="true">all</span></a>`;
+
+/** The wrecking ball hangs on a wire that bends. It swings when the page opens and when it is clicked, and at no other time. */
+const SWING = `<script>(function(){var s=document.getElementById('wb');if(!s)return;var p=s.querySelector('path'),c=s.querySelector('circle'),L=40,Y=-40,t0=0,raf=0,amp=0;
+function draw(th,om){var x=L*Math.sin(th),y=Y+L*Math.cos(th);var cx=x*0.5-om*2.4,cy=Y+(y-Y)*0.55;p.setAttribute('d','M0,'+Y+' Q'+cx.toFixed(2)+','+cy.toFixed(2)+' '+x.toFixed(2)+','+y.toFixed(2));c.setAttribute('cx',x.toFixed(2));c.setAttribute('cy',y.toFixed(2));}
+function frame(now){if(!t0)t0=now;var t=(now-t0)/1000,k=0.95,w=5.4,e=amp*Math.exp(-k*t);var th=e*Math.cos(w*t),om=e*(-k*Math.cos(w*t)-w*Math.sin(w*t))/w;draw(th,om);if(e>0.004){raf=requestAnimationFrame(frame);}else{draw(0,0);raf=0;}}
+function swing(a){if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;amp=a;t0=0;if(raf)cancelAnimationFrame(raf);raf=requestAnimationFrame(frame);}
+s.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();swing(0.85);});swing(0.75);})();</script>`;
 
 const page = (title: string, nav: string, body: string) =>
-  `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${h(title)}</title><style>${CSS}</style></head><body><nav>${nav}</nav><main>${body}</main></body></html>`;
+  `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${h(title)}</title><style>${CSS}</style></head><body><nav>${nav}</nav><main>${body}</main>${SWING}</body></html>`;
 
 const hasPhoto = (r: Item) => Boolean(r.photos?.[0]?.telegram_file_id || r.photos?.[0]?.data);
 const photoStyle = (key: string, r: Item) => (hasPhoto(r) ? ` style="background-image:url('/l/${key}/photo/${r.id}?v=${(r.photos?.[0]?.data ?? '').length}')"` : '');
@@ -98,7 +104,7 @@ export async function listingsHtml(): Promise<string> {
   const earned = sold.reduce((sum, r) => sum + (r.sold_cents ?? 0), 0);
   const card = (r: Row) => {
     const s = status(r);
-    return `<a class="card" href="/l/${key}/item/${r.id}"><div class="photo"${photoStyle(key, r)}>${initial(r)}<span class="pill ${s.cls}">${h(s.text)}</span></div><h2>${h(r.title ?? 'Item')}</h2><p class="sub"><b>${dollars(r.status === 'sold' ? r.sold_cents : r.ask_cents)}</b><span>${r.buyers} buyer${r.buyers === 1 ? '' : 's'}</span></p></a>`;
+    return `<a class="card" href="/l/${key}/item/${r.id}"><div class="photo"${photoStyle(key, r)}>${initial(r)}<span class="pill ${s.cls}">${h(s.text)}</span></div><h2>${h(r.title ?? 'Item')}</h2><p class="sub"><b>${dollars(r.status === 'sold' ? r.sold_cents : r.ask_cents)}</b><span class="icons"><span class="ico own"></span>${(r.channels ?? []).map((c) => siteIcon(c.url)).join('')}</span></p></a>`;
   };
   const headline = sold.length > 0 ? `${dollars(earned)} earned.` : live.length > 0 ? `${live.length} thing${live.length === 1 ? '' : 's'} selling.` : 'Nothing listed yet.';
   const sub = live.length > 0 ? 'Lowball is handling every buyer. You get a calendar invite when a pickup is booked.' : 'Send a photo to the Telegram bot. That is all it takes.';
@@ -108,7 +114,7 @@ export async function listingsHtml(): Promise<string> {
     `<section class="hero"><h1>${h(headline)}</h1><p>${h(sub)}</p></section>
      ${live.length > 0 ? `<div class="grid">${live.map(card).join('')}</div>` : '<div class="empty">Your listings appear here.</div>'}
      ${sold.length > 0 ? `<p class="label">Sold</p><div class="grid">${sold.map(card).join('')}</div>` : ''}`,
-  ).replace('</head>', '<meta http-equiv="refresh" content="20"></head>');
+  );
 }
 
 export async function itemHtml(id: string, flash?: { ok?: string; err?: string }): Promise<string | undefined> {
@@ -149,6 +155,16 @@ export async function itemHtml(id: string, flash?: { ok?: string; err?: string }
   );
 }
 
+/** The marketplace's own icon, by domain. */
+function siteIcon(url: string): string {
+  try {
+    const host = new URL(url).hostname.replace(/^(www|post|accounts)\./, '');
+    return `<img class="ico" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64" alt="" loading="lazy">`;
+  } catch {
+    return '<span class="ico"></span>';
+  }
+}
+
 function channelsHtml(key: string, r: Row): string {
   const channels = r.channels ?? [];
   if (channels.length === 0) return '';
@@ -157,10 +173,10 @@ function channelsHtml(key: string, r: Row): string {
     .map((c) => {
       const state = sold || c.status === 'sold' ? '<span class="st muted">Sold</span>' : c.status === 'live' ? '<span class="st ok">Live</span>' : `<a class="st link" href="${h(c.url)}" target="_blank" rel="noopener">Post</a>`;
       const toggle = sold || c.status === 'sold' ? '' : `<form method="post" action="/l/${key}/item/${r.id}/channel"><input type="hidden" name="name" value="${h(c.name)}"><input type="hidden" name="status" value="${c.status === 'live' ? 'ready' : 'live'}"><button class="ghost" type="submit">${c.status === 'live' ? 'Undo' : 'Mark posted'}</button></form>`;
-      return `<li><div><b>${h(c.name)}</b><span>${h(c.why)}</span></div>${toggle}${state}</li>`;
+      return `<li>${siteIcon(c.url)}<div><b>${h(c.name)}</b><span>${h(c.why)}</span></div>${toggle}${state}</li>`;
     })
     .join('');
-  return `<p class="label">Where it sells best</p><ul class="channels"><li><div><b>Lowball inbox</b><span>Every buyer is answered here</span></div><span class="st ${sold ? 'muted' : 'ok'}">${sold ? 'Sold' : 'Live'}</span></li>${rows}</ul>`;
+  return `<p class="label">Where it sells best</p><ul class="channels"><li><span class="ico own"></span><div><b>Lowball inbox</b><span>Every buyer is answered here</span></div><span class="st ${sold ? 'muted' : 'ok'}">${sold ? 'Sold' : 'Live'}</span></li>${rows}</ul>`;
 }
 
 /** Saves the ad fields. The negotiator reads these on every reply, so a change applies at once. */
