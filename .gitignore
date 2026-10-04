@@ -13,3 +13,4 @@ tmp
 next-env.d.ts
 apps/board/AGENTS.md
 apps/board/CLAUDE.md
+lowball-build-plan.md
